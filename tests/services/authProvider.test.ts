@@ -16,6 +16,7 @@ describe('isAuthProvider', () => {
       expect(isAuthProvider('email')).toBe(true);
       expect(isAuthProvider('email_registration')).toBe(true);
       expect(isAuthProvider('google')).toBe(true);
+      expect(isAuthProvider('guest')).toBe(true);
    });
 
    it('rejects invalid values', () => {

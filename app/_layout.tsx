@@ -23,6 +23,13 @@ import { useDeviceLocationOnAppLoad } from '@/hooks/useDeviceLocationOnAppLoad';
 import { useUserLocationSync } from '@/hooks/useUserLocationSync';
 import { isTrackPlayerNotificationUrl } from '@/utils/playbackNotificationNavigation';
 import { resolvePersistedPlaybackRoute } from '@/utils/playbackReturnPathStorage';
+import {
+   clearSignupWizardProgress,
+   getSignupWizardProgress,
+   resolveSignupWizardRoute,
+   signupWizardRouteToHref,
+} from '@/utils/signupWizardStorage';
+import { hydrateOnboardingStoreFromProgress } from '@/store/onboarding';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { Toast } from '@/components/Toast';
@@ -114,8 +121,19 @@ function InnerLayout() {
       }
 
       void (async () => {
+         const progress = getSignupWizardProgress();
+         const routeContext = {
+            isAuthenticated,
+            requiresOnboarding,
+         };
+
+         if (isAuthenticated && !requiresOnboarding) {
+            await clearSignupWizardProgress();
+         }
+
          if (!isAuthenticated) {
-            router.replace('/signin');
+            const wizardRoute = resolveSignupWizardRoute(progress, routeContext);
+            router.replace(signupWizardRouteToHref(wizardRoute));
             setIsInitialRouteSet(true);
             return;
          }
@@ -131,7 +149,9 @@ function InnerLayout() {
          }
 
          if (requiresOnboarding) {
-            router.replace('/onboarding/age' as Href);
+            hydrateOnboardingStoreFromProgress();
+            const wizardRoute = resolveSignupWizardRoute(progress, routeContext);
+            router.replace(signupWizardRouteToHref(wizardRoute));
             setIsInitialRouteSet(true);
             return;
          }
@@ -193,7 +213,13 @@ function InnerLayout() {
       if (!isAuthenticated && inAuthGroup) {
          router.replace('/signin');
       } else if (isAuthenticated && requiresOnboarding && !inOnboarding) {
-         router.replace('/onboarding/age' as Href);
+         hydrateOnboardingStoreFromProgress();
+         const progress = getSignupWizardProgress();
+         const wizardRoute = resolveSignupWizardRoute(progress, {
+            isAuthenticated,
+            requiresOnboarding,
+         });
+         router.replace(signupWizardRouteToHref(wizardRoute));
       } else if (isAuthenticated && !requiresOnboarding && (onAuthScreen || inOnboarding)) {
          if (onAuthScreen && !profileFetched) {
             return;

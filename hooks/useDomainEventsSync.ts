@@ -26,6 +26,7 @@ export function useDomainEventsSync(): void {
    const isInitialized = useSelector(
       (state: RootState) => state.auth.isInitialized
    );
+   const currentUserId = useSelector((state: RootState) => state.auth.user?.id ?? null);
 
    const pendingEventsRef = useRef<CacheInvalidateEvent[]>([]);
    const batchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -34,13 +35,16 @@ export function useDomainEventsSync(): void {
    const backoffRef = useRef(INITIAL_BACKOFF_MS);
    const shouldConnectRef = useRef(false);
    const accessTokenRef = useRef<string | null>(null);
+   const currentUserIdRef = useRef<string | null>(null);
 
    const flushInvalidations = (): void => {
       batchTimerRef.current = null;
       const events = pendingEventsRef.current;
       pendingEventsRef.current = [];
       for (const event of events) {
-         applyDomainCacheEvent(event);
+         applyDomainCacheEvent(event, {
+            currentUserId: currentUserIdRef.current,
+         });
       }
    };
 
@@ -128,6 +132,10 @@ export function useDomainEventsSync(): void {
    useEffect(() => {
       accessTokenRef.current = accessToken;
    }, [accessToken]);
+
+   useEffect(() => {
+      currentUserIdRef.current = currentUserId;
+   }, [currentUserId]);
 
    useEffect(() => {
       const shouldConnect =

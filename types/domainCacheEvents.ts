@@ -8,6 +8,8 @@ export type AuthDomainResource =
    | 'organization-member'
    | 'subscription-plan'
    | 'user-subscription'
+   | 'subscription-catalog'
+   | 'subscription-gating'
    | 'user-device';
 
 export type AppDomainResource =
@@ -26,7 +28,13 @@ export type AppDomainResource =
    | 'genre'
    | 'mood'
    | 'user-audiobook'
+   | 'subscription-catalog'
+   | 'subscription-gating'
    | 'offline-download';
+
+export interface ApplyDomainCacheEventContext {
+   currentUserId?: string | null;
+}
 
 export interface AuthCacheInvalidateEvent {
    version: 1;

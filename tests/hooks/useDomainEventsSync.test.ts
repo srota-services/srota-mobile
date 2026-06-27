@@ -87,7 +87,9 @@ describe('useDomainEventsSync', () => {
       });
 
       await waitFor(() => {
-         expect(applyDomainCacheEvent).toHaveBeenCalledWith(event);
+         expect(applyDomainCacheEvent).toHaveBeenCalledWith(event, {
+            currentUserId: null,
+         });
       });
    });
 });

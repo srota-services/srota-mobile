@@ -26,6 +26,8 @@ import { fetchDeviceLocationInMemory } from '@/services/location';
 import { AppDispatch } from '@/store';
 import { ApiError } from '@/services/api';
 import { isDeviceLimitExceededError } from '@/utils/authApiErrors';
+import { patchSignupWizardProgress, persistSignupWizardProgress } from '@/utils/signupWizardStorage';
+import { useSignupWizardStepPersistence } from '@/hooks/useSignupWizardStepPersistence';
 
 /**
  * OTP verification screen for registration
@@ -194,15 +196,20 @@ export default function VerifyOtpScreen() {
    );
 
    const dispatch = useDispatch<AppDispatch>();
-   const params = useLocalSearchParams<{ email: string }>();
+   const params = useLocalSearchParams<{ email: string; autoResendOtp?: string }>();
    const email = params.email || '';
+   const shouldAutoResendOtp = params.autoResendOtp === 'true';
 
    const [isVerifying, setIsVerifying] = useState(false);
    const [isResending, setIsResending] = useState(false);
+   const [isAutoResending, setIsAutoResending] = useState(false);
    const [error, setError] = useState<string | null>(null);
    const [resendCountdown, setResendCountdown] = useState(0);
    const [otpKey, setOtpKey] = useState(0); // Key to reset OTP input
    const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+   const hasAutoResentRef = useRef(false);
+
+   useSignupWizardStepPersistence('verify_otp');
 
    /**
     * Start countdown timer for resend OTP button
@@ -230,15 +237,42 @@ export default function VerifyOtpScreen() {
     * Cleanup countdown on unmount
     */
    useEffect(() => {
-      // Start countdown when component mounts
-      startCountdown();
+      if (!email) {
+         return;
+      }
+
+      void patchSignupWizardProgress({ step: 'verify_otp', email: email.trim() });
+
+      if (shouldAutoResendOtp && !hasAutoResentRef.current) {
+         hasAutoResentRef.current = true;
+         setIsAutoResending(true);
+         setError(null);
+
+         void (async () => {
+            try {
+               await resendRegistrationOTP({ email: email.trim() });
+               startCountdown();
+            } catch (err) {
+               if (err instanceof ApiError) {
+                  const errorData = err.data as { message?: string } | undefined;
+                  setError(errorData?.message || 'Failed to send OTP. Please try again.');
+               } else {
+                  setError('Failed to send OTP. Please try again.');
+               }
+            } finally {
+               setIsAutoResending(false);
+            }
+         })();
+      } else {
+         startCountdown();
+      }
 
       return () => {
          if (countdownIntervalRef.current) {
             clearInterval(countdownIntervalRef.current);
          }
       };
-   }, [startCountdown]);
+   }, [email, shouldAutoResendOtp, startCountdown]);
 
    /**
     * Handle OTP completion (auto-submit when all digits entered)
@@ -282,6 +316,11 @@ export default function VerifyOtpScreen() {
             }
 
             void fetchDeviceLocationInMemory();
+
+            await persistSignupWizardProgress({
+               step: 'onboarding_age',
+               email: email.trim(),
+            });
 
             // Navigation is handled centrally by the auth guard in `app/_layout.tsx`
          } catch (err) {
@@ -462,10 +501,12 @@ export default function VerifyOtpScreen() {
                   </View>
 
                   {/* Loading Indicator */}
-                  {isVerifying && (
+                  {(isVerifying || isAutoResending) && (
                      <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={colors.app.red} />
-                        <Text style={styles.loadingText}>Verifying OTP...</Text>
+                        <Text style={styles.loadingText}>
+                           {isAutoResending ? 'Sending OTP...' : 'Verifying OTP...'}
+                        </Text>
                      </View>
                   )}
                </ScrollView>

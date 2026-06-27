@@ -8,9 +8,11 @@ import {
    useOnboardingStore,
    GENDER_OPTIONS,
    parseGenderFromApi,
+   hydrateOnboardingStoreFromProgress,
    type GenderValue,
 } from '@/store/onboarding';
 import { RootState } from '@/store';
+import { useSignupWizardStepPersistence } from '@/hooks/useSignupWizardStepPersistence';
 
 const TOTAL_STEPS = 4;
 
@@ -21,6 +23,12 @@ export default function OnboardingGenderScreen() {
    const userProfile = useSelector((state: RootState) => state.auth.userProfile);
    const storedGender = useOnboardingStore((s) => s.gender);
    const setStoredGender = useOnboardingStore((s) => s.setGender);
+
+   useSignupWizardStepPersistence('onboarding_gender');
+
+   useEffect(() => {
+      hydrateOnboardingStoreFromProgress();
+   }, []);
 
    const [selectedGender, setSelectedGender] = useState<GenderValue | null>(storedGender);
    const [error, setError] = useState<string | null>(null);

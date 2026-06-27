@@ -6,8 +6,14 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { AgeNumberPicker } from '@/components/AgeNumberPicker';
 import { WizardScreenLayout } from '@/components/WizardScreenLayout';
 import { fetchUserProfile } from '@/store/auth';
-import { useOnboardingStore, MIN_AGE, MAX_AGE } from '@/store/onboarding';
+import {
+   useOnboardingStore,
+   MIN_AGE,
+   MAX_AGE,
+   hydrateOnboardingStoreFromProgress,
+} from '@/store/onboarding';
 import { AppDispatch, RootState } from '@/store';
+import { useSignupWizardStepPersistence } from '@/hooks/useSignupWizardStepPersistence';
 
 const TOTAL_STEPS = 4;
 const DEFAULT_AGE = 25;
@@ -37,6 +43,12 @@ export default function OnboardingAgeScreen() {
    const dispatch = useDispatch<AppDispatch>();
    const userProfile = useSelector((state: RootState) => state.auth.userProfile);
    const profileFetched = useSelector((state: RootState) => state.auth.profileFetched);
+
+   useSignupWizardStepPersistence('onboarding_age');
+
+   useEffect(() => {
+      hydrateOnboardingStoreFromProgress();
+   }, []);
 
    const storedAge = useOnboardingStore((s) => s.age);
    const setStoredAge = useOnboardingStore((s) => s.setAge);

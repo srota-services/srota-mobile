@@ -240,7 +240,11 @@ const authSlice = createSlice({
          state.user = action.payload.user;
          state.authProvider = action.payload.authProvider;
          state.isAuthenticated = true;
-         state.requiresOnboarding = action.payload.requiresOnboarding === true;
+
+         const guestUser = isGuestUser(action.payload.user);
+         state.requiresOnboarding = guestUser
+            ? false
+            : action.payload.requiresOnboarding === true;
          if (state.requiresOnboarding) {
             persistOnboardingPending(true);
          }
@@ -248,7 +252,8 @@ const authSlice = createSlice({
          // Clear previous user profile when new account logs in
          // This ensures multiple accounts on same device don't mix profiles
          state.userProfile = null;
-         state.profileFetched = false;
+         // Guest sessions skip profile fetch; auth guard waits on profileFetched
+         state.profileFetched = guestUser;
 
          // Persist to secure store
          persistAuthSessionToSecureStore(

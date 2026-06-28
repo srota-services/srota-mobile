@@ -44,6 +44,7 @@ import { useUserSubscription } from '@/hooks/useUserSubscription';
 import { useTabScrollToTop } from '@/hooks/useTabScrollToTop';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { playContinueListeningChapter } from '@/utils/playContinueListeningChapter';
+import { getHomeGreetingName } from '@/utils/guestUser';
 
 const HEADER_ICON_SIZE = 24;
 const HEADER_ICON_HIT_SLOP = spacing.xs;
@@ -230,6 +231,7 @@ function HomeScreenContent() {
    const { greeting, subtitle: timeOfDaySubtitle } = useTimeOfDay();
 
    const userProfile = useSelector((state: RootState) => state.auth.userProfile);
+   const user = useSelector((state: RootState) => state.auth.user);
    const { activeSubscription, refetch: refetchSubscription, isRefetching: isSubscriptionRefetching } =
       useUserSubscription();
    const dispatch = useDispatch();
@@ -239,10 +241,10 @@ function HomeScreenContent() {
       refetch: refetchContinueListening,
    } = useContinueListening();
 
-   const greetingName = useMemo(() => {
-      if (userProfile?.firstName) return userProfile.firstName;
-      return 'there';
-   }, [userProfile]);
+   const greetingName = useMemo(
+      () => getHomeGreetingName(user, userProfile?.firstName),
+      [user, userProfile?.firstName]
+   );
 
    const drawerDisplayName = useMemo(() => {
       if (userProfile?.firstName && userProfile?.lastName) {

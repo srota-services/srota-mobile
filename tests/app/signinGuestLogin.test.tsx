@@ -120,5 +120,7 @@ describe('SignInScreen guest login', () => {
       expect(store.getState().auth.authProvider).toBe('guest');
       expect(store.getState().auth.accessToken).toBe('guest-access-token');
       expect(store.getState().auth.user?.role).toBe('GUEST');
+      expect(store.getState().auth.profileFetched).toBe(true);
+      expect(store.getState().auth.requiresOnboarding).toBe(false);
    });
 });

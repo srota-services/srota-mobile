@@ -183,8 +183,28 @@ export default function SignInScreen() {
          },
       }),
    },
-   guestButton: {
-      marginBottom: spacing.lg,
+   guestLinkButton: {
+      alignSelf: 'center',
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.md,
+      minHeight: 32,
+      justifyContent: 'center',
+   },
+   guestLinkText: {
+      fontSize: typography.fontSize.sm,
+      color: t.colors.primary[400],
+      ...Platform.select({
+         ios: {
+            fontFamily: 'System',
+            fontWeight: '500',
+         },
+         android: {
+            fontFamily: 'sans-serif-medium',
+         },
+      }),
+   },
+   guestLinkTextDisabled: {
+      color: t.colors.text.muted,
    },
    signUpLinkContainer: {
       flexDirection: 'row',
@@ -531,6 +551,7 @@ export default function SignInScreen() {
                         onPress={handleSignIn}
                         loading={isLoadingSignIn}
                         disabled={isLoadingSignIn || isLoadingGoogle || isLoadingGuest}
+                        variant="outlined"
                         style={styles.authButton}
                         testID="signin-button"
                      />
@@ -567,15 +588,27 @@ export default function SignInScreen() {
                         )}
                      </TouchableOpacity>
 
-                     <SecondaryButton
-                        title="Login as Guest"
+                     <TouchableOpacity
                         onPress={handleGuestLogin}
-                        loading={isLoadingGuest}
+                        style={styles.guestLinkButton}
+                        activeOpacity={0.7}
                         disabled={isLoadingSignIn || isLoadingGoogle || isLoadingGuest}
-                        variant="outlined"
-                        style={styles.guestButton}
                         testID="guest-login-button"
-                     />
+                     >
+                        {isLoadingGuest ? (
+                           <ActivityIndicator size="small" color={colors.primary[400]} />
+                        ) : (
+                           <Text
+                              style={[
+                                 styles.guestLinkText,
+                                 (isLoadingSignIn || isLoadingGoogle) &&
+                                    styles.guestLinkTextDisabled,
+                              ]}
+                           >
+                              Login as Guest
+                           </Text>
+                        )}
+                     </TouchableOpacity>
 
                      {/* Sign Up Link */}
                      <View style={styles.signUpLinkContainer}>

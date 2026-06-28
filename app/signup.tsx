@@ -387,6 +387,7 @@ export default function SignUpScreen() {
                         onPress={handleSignUp}
                         loading={isLoading}
                         disabled={isLoading}
+                        variant="outlined"
                         style={styles.authButton}
                         testID="signup-button"
                      />

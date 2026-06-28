@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import * as SecureStore from 'expo-secure-store';
-import authReducer, { initializeAuth } from '@/store/auth';
+import authReducer, { initializeAuth, setAuth } from '@/store/auth';
 import { createGuestSession } from '@/services/auth';
 
 jest.mock('expo-secure-store', () => ({
@@ -13,6 +13,10 @@ jest.mock('@/services/auth', () => ({
    createGuestSession: jest.fn(),
    isAuthProvider: (value: string) =>
       ['email', 'email_registration', 'google', 'guest'].includes(value),
+}));
+
+jest.mock('@/services/device', () => ({
+   fetchAndStoreDeviceDetails: jest.fn(() => Promise.resolve()),
 }));
 
 const mockedGetItemAsync = SecureStore.getItemAsync as jest.MockedFunction<
@@ -107,5 +111,31 @@ describe('initializeAuth session restore', () => {
       expect(store.getState().auth.authProvider).toBe('guest');
       expect(store.getState().auth.isAuthenticated).toBe(true);
       expect(store.getState().auth.requiresOnboarding).toBe(false);
+   });
+});
+
+describe('setAuth guest login', () => {
+   it('marks profile as fetched so auth guard can navigate to home', () => {
+      const store = createTestStore();
+
+      store.dispatch(
+         setAuth({
+            accessToken: 'guest-access-token',
+            refreshToken: 'guest-refresh-token',
+            user: {
+               id: 'guest-user-1',
+               email: 'guest@example.com',
+               role: 'GUEST',
+               emailVerified: true,
+            },
+            authProvider: 'guest',
+         })
+      );
+
+      const state = store.getState().auth;
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.authProvider).toBe('guest');
+      expect(state.profileFetched).toBe(true);
+      expect(state.requiresOnboarding).toBe(false);
    });
 });

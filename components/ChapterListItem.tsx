@@ -17,6 +17,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { formatDuration } from '@/utils/duration';
 import { canAccessChapter } from '@/utils/chapterAccess';
+import { formatSubscriptionAccessMessage } from '@/utils/subscriptionAccessDisplay';
+import { InfoTooltip } from '@/components/InfoTooltip';
+import type { SubscriptionPlan } from '@/services/subscriptions';
 
 interface ChapterListItemProps {
    chapter: Chapter;
@@ -27,6 +30,7 @@ interface ChapterListItemProps {
    showResumeBadge?: boolean;
    onDownloadPress?: (chapter: Chapter) => void;
    onCommentsPress?: (chapter: Chapter) => void;
+   subscriptionPlans?: SubscriptionPlan[];
 }
 
 export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
@@ -36,9 +40,13 @@ export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
       isCurrentlyPlaying = false,
       isActive = false,
       onDownloadPress,
+      subscriptionPlans,
    }) => {
       const { colors } = useTheme();
       const canInteract = canAccessChapter(chapter);
+      const accessTooltipMessage = canInteract
+         ? null
+         : formatSubscriptionAccessMessage(chapter.subscriptionAccess, subscriptionPlans);
       const styles = useThemedStyles((t) =>
          StyleSheet.create({
             container: {
@@ -182,7 +190,13 @@ export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
                   </Text>
                </View>
 
-               <View style={styles.actions} pointerEvents={canInteract ? 'auto' : 'none'}>
+               <View style={styles.actions} pointerEvents={canInteract ? 'auto' : 'box-none'}>
+                  {!canInteract && accessTooltipMessage ? (
+                     <InfoTooltip
+                        message={accessTooltipMessage}
+                        accessibilityLabel="Chapter access information"
+                     />
+                  ) : null}
                   {canInteract && onDownloadPress && (
                      <TouchableOpacity
                         style={styles.actionButton}

@@ -13,7 +13,8 @@ export function getChapterListSyncSignature(
       .map((chapter) => {
          const canAccess = chapter.subscriptionAccess?.canAccess;
          const message = chapter.subscriptionAccess?.message ?? '';
-         return `${chapter.id}:${String(canAccess)}:${message}`;
+         const requiredTier = chapter.subscriptionAccess?.requiredTier ?? '';
+         return `${chapter.id}:${String(canAccess)}:${message}:${String(requiredTier)}`;
       })
       .join('|');
 }

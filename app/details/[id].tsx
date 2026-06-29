@@ -46,6 +46,7 @@ import { useFavorite, useFavoriteMutations } from '@/hooks/useFavorite';
 import { useReviewMutation } from '@/hooks/useReviewMutation';
 import { AddToPlaylistSheet } from '@/components/AddToPlaylistSheet';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useSubscriptionPlans } from '@/hooks/useSubscriptionPlans';
 
 export default function DetailsScreen() {
    const { colors } = useTheme();
@@ -630,6 +631,8 @@ export default function DetailsScreen() {
    } = useAudiobook(id || '');
    useNotFoundRedirect(isNotFound, 'This audiobook is no longer available.');
 
+   const { plans: subscriptionPlans } = useSubscriptionPlans();
+
    const audiobook = audiobookData?.data;
 
    const { data: favorite, refetch: refetchFavorite, isRefetching: isFavoriteRefetching } =
@@ -1074,6 +1077,7 @@ export default function DetailsScreen() {
                }
                isActive={isActiveChapter}
                onDownloadPress={() => {}}
+               subscriptionPlans={subscriptionPlans}
             />
          );
       },
@@ -1082,6 +1086,7 @@ export default function DetailsScreen() {
          currentPlayingChapterId,
          isPlaying,
          isPlayerVisible,
+         subscriptionPlans,
       ]
    );
 

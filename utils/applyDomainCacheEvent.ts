@@ -369,25 +369,86 @@ function applySubscriptionCatalogEvent(
       return;
    }
    removeThenInvalidatePrefixes(resolveSubscriptionPrefixes(event));
+   invalidateAudiobookChapterQueries();
 }
 
-function applySubscriptionGatingEvent(event: CacheInvalidateEvent): void {
-   const audiobookId = event.relatedIds?.audiobookId;
+function isAudiobookChaptersQueryKey(key: readonly unknown[]): boolean {
+   return (
+      key.length >= 3 &&
+      key[0] === 'audiobooks' &&
+      key[2] === 'chapters'
+   );
+}
 
+function invalidateAudiobookChapterQueries(audiobookId?: string): void {
    if (audiobookId) {
-      removeThenInvalidatePrefixes([
-         queryKeys.audiobooks.detail(audiobookId),
-         queryKeys.audiobooks.chaptersAll(audiobookId),
-         queryKeys.audiobooks.all(),
-      ]);
+      void queryClient.cancelQueries({
+         queryKey: queryKeys.audiobooks.chaptersAll(audiobookId),
+         exact: false,
+      });
+      void queryClient.removeQueries({
+         queryKey: queryKeys.audiobooks.chaptersAll(audiobookId),
+         exact: false,
+      });
+      void queryClient.invalidateQueries({
+         queryKey: queryKeys.audiobooks.chaptersAll(audiobookId),
+         exact: false,
+      });
       return;
    }
 
-   const prefixes: (readonly unknown[])[] = [
-      ...event.queryKeys,
+   void queryClient.cancelQueries({
+      predicate: (query) => isAudiobookChaptersQueryKey(query.queryKey),
+   });
+   void queryClient.removeQueries({
+      predicate: (query) => isAudiobookChaptersQueryKey(query.queryKey),
+   });
+   void queryClient.invalidateQueries({
+      predicate: (query) => isAudiobookChaptersQueryKey(query.queryKey),
+   });
+}
+
+function isSubscriptionAccessInvalidationEvent(event: CacheInvalidateEvent): boolean {
+   if (event.resource === 'subscription-gating') {
+      return true;
+   }
+
+   if (event.resource !== 'audiobook' && event.resource !== 'chapter') {
+      return false;
+   }
+
+   const { audiobookId, chapterId } = event.relatedIds ?? {};
+   return Boolean(audiobookId || chapterId);
+}
+
+function applySubscriptionAccessInvalidation(event: CacheInvalidateEvent): void {
+   const audiobookId = event.relatedIds?.audiobookId;
+   const chapterId = event.relatedIds?.chapterId;
+   const prefixes: (readonly unknown[])[] = [...event.queryKeys];
+
+   if (audiobookId && chapterId) {
+      prefixes.push(
+         queryKeys.audiobooks.chapter(audiobookId, chapterId),
+         queryKeys.audiobooks.chaptersAll(audiobookId)
+      );
+      removeThenInvalidatePrefixes(uniqueQueryKeys(prefixes));
+      return;
+   }
+
+   if (audiobookId) {
+      prefixes.push(
+         queryKeys.audiobooks.detail(audiobookId),
+         queryKeys.audiobooks.chaptersAll(audiobookId),
+         queryKeys.audiobooks.all()
+      );
+      removeThenInvalidatePrefixes(uniqueQueryKeys(prefixes));
+      return;
+   }
+
+   prefixes.push(
       queryKeys.audiobooks.all(),
-      queryKeys.userAudiobooks.all(),
-   ];
+      queryKeys.userAudiobooks.all()
+   );
 
    if (event.relatedIds?.planId) {
       prefixes.push(
@@ -397,6 +458,7 @@ function applySubscriptionGatingEvent(event: CacheInvalidateEvent): void {
    }
 
    removeThenInvalidatePrefixes(uniqueQueryKeys(prefixes));
+   invalidateAudiobookChapterQueries();
 }
 
 function cancelDeletedEntityQueries(deletedAudiobookIds: readonly string[]): void {
@@ -460,8 +522,8 @@ export function applyDomainCacheEvent(
       return;
    }
 
-   if (event.resource === 'subscription-gating') {
-      applySubscriptionGatingEvent(event);
+   if (isSubscriptionAccessInvalidationEvent(event)) {
+      applySubscriptionAccessInvalidation(event);
       return;
    }
 

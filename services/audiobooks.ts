@@ -41,11 +41,13 @@ export interface AudiobookTag {
 /**
  * Subscription access info returned with a single audiobook
  */
+export type SubscriptionTierCode = 'BASE' | 'STANDARD' | 'PREMIUM';
+
 export interface SubscriptionAccess {
    canAccess: boolean;
    message?: string;
-   requiredTier?: number;
-   userTier?: number;
+   requiredTier?: SubscriptionTierCode | number;
+   userTier?: SubscriptionTierCode | number | null;
 }
 
 /**

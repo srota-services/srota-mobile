@@ -163,6 +163,7 @@ export interface Chapter {
    bookmarks: unknown[];
    notes: unknown[];
    chapterProgress: unknown[];
+   subscriptionAccess?: SubscriptionAccess;
 }
 
 /**

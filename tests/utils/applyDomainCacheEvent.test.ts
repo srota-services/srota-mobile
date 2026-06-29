@@ -137,6 +137,9 @@ describe('applyDomainCacheEvent', () => {
          queryKey: ['subscriptions', 'me'],
          exact: false,
       });
+      expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+         predicate: expect.any(Function),
+      });
    });
 
    it('subscription-catalog no-ops when userId does not match', () => {
@@ -188,6 +191,76 @@ describe('applyDomainCacheEvent', () => {
       });
    });
 
+   it('subscription-gating scopes chapter access refresh to one chapter list', () => {
+      applyDomainCacheEvent({
+         version: 1,
+         service: 'app',
+         resource: 'subscription-gating',
+         action: 'updated',
+         id: 'ch-1',
+         relatedIds: { audiobookId: 'ab-1', chapterId: 'ch-1' },
+         queryKeys: [['audiobooks', 'ab-1', 'chapters', 'ch-1']],
+         timestamp: '2026-06-13T00:00:00.000Z',
+      });
+
+      expect(queryClient.removeQueries).toHaveBeenCalledWith({
+         queryKey: ['audiobooks', 'ab-1', 'chapters', 'ch-1'],
+         exact: false,
+      });
+      expect(queryClient.removeQueries).toHaveBeenCalledWith({
+         queryKey: ['audiobooks', 'ab-1', 'chapters'],
+         exact: false,
+      });
+      expect(queryClient.removeQueries).not.toHaveBeenCalledWith({
+         queryKey: ['audiobooks', 'ab-1'],
+         exact: false,
+      });
+   });
+
+   it('chapter updated with relatedIds refreshes chapter subscription access', () => {
+      applyDomainCacheEvent({
+         version: 1,
+         service: 'app',
+         resource: 'chapter',
+         action: 'updated',
+         id: 'ch-2',
+         relatedIds: { audiobookId: 'ab-2', chapterId: 'ch-2' },
+         queryKeys: [['audiobooks', 'ab-2', 'chapters']],
+         timestamp: '2026-06-13T00:00:00.000Z',
+      });
+
+      expect(queryClient.removeQueries).toHaveBeenCalledWith({
+         queryKey: ['audiobooks', 'ab-2', 'chapters', 'ch-2'],
+         exact: false,
+      });
+      expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+         queryKey: ['audiobooks', 'ab-2', 'chapters'],
+         exact: false,
+      });
+   });
+
+   it('audiobook updated with relatedIds refreshes audiobook subscription access', () => {
+      applyDomainCacheEvent({
+         version: 1,
+         service: 'app',
+         resource: 'audiobook',
+         action: 'updated',
+         id: 'ab-3',
+         relatedIds: { audiobookId: 'ab-3' },
+         queryKeys: [['audiobooks', 'ab-3']],
+         timestamp: '2026-06-13T00:00:00.000Z',
+      });
+
+      expect(queryClient.removeQueries).toHaveBeenCalledWith({
+         queryKey: ['audiobooks', 'ab-3'],
+         exact: false,
+      });
+      expect(queryClient.removeQueries).toHaveBeenCalledWith({
+         queryKey: ['audiobooks', 'ab-3', 'chapters'],
+         exact: false,
+      });
+   });
+
    it('subscription-gating removes and invalidates full catalog on plan change', () => {
       applyDomainCacheEvent({
          version: 1,
@@ -221,6 +294,9 @@ describe('applyDomainCacheEvent', () => {
       expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
          queryKey: ['subscription-plans', 'plan-1'],
          exact: false,
+      });
+      expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+         predicate: expect.any(Function),
       });
    });
 });

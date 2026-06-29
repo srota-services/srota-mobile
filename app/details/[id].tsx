@@ -33,6 +33,7 @@ import { SkeletonChapterRow, SkeletonDetailsHeader, SkeletonDetailsAbout } from 
 import { TabUnderline } from '@/components/TabUnderline';
 import { TabSlideView } from '@/components/TabSlideView';
 import { formatDuration } from '@/utils/duration';
+import { canAccessChapter, getChapterListSyncSignature } from '@/utils/chapterAccess';
 import { resolveAudiobookImageUrl } from '@/utils/imageAssets';
 import { useDispatch } from 'react-redux';
 import { setTotalDuration, play } from '@/store/player';
@@ -691,15 +692,20 @@ export default function DetailsScreen() {
    // Track last processed data to prevent infinite loops
    const lastProcessedDataRef = useRef<{
       chapterIds: Set<string>;
+      accessSignature: string;
       pagination: { hasNextPage: boolean; currentPage: number; totalPages: number } | null;
-   }>({ chapterIds: new Set(), pagination: null });
+   }>({ chapterIds: new Set(), accessSignature: '', pagination: null });
 
    // Clear chapter list when subscription does not allow access
    useEffect(() => {
       if (isAccessRestricted) {
          setAllChapters([]);
          setPagination(null);
-         lastProcessedDataRef.current = { chapterIds: new Set(), pagination: null };
+         lastProcessedDataRef.current = {
+            chapterIds: new Set(),
+            accessSignature: '',
+            pagination: null,
+         };
       }
    }, [isAccessRestricted]);
 
@@ -737,6 +743,9 @@ export default function DetailsScreen() {
       // Check if data actually changed by comparing chapter IDs
       const currentChapterIds = new Set(uniqueChapters.map((c) => c.id));
       const lastChapterIds = lastProcessedDataRef.current.chapterIds;
+      const accessSignature = getChapterListSyncSignature(uniqueChapters);
+      const accessChanged =
+         accessSignature !== lastProcessedDataRef.current.accessSignature;
 
       // Check if sets are different
       let paginationChanged = false;
@@ -751,7 +760,8 @@ export default function DetailsScreen() {
       const hasChanged =
          currentChapterIds.size !== lastChapterIds.size ||
          !Array.from(currentChapterIds).every((id) => lastChapterIds.has(id)) ||
-         paginationChanged;
+         paginationChanged ||
+         accessChanged;
 
       // Only update state if data actually changed
       if (hasChanged) {
@@ -760,11 +770,13 @@ export default function DetailsScreen() {
             setPagination(latestPagination);
             lastProcessedDataRef.current = {
                chapterIds: currentChapterIds,
+               accessSignature,
                pagination: latestPagination,
             };
          } else {
             lastProcessedDataRef.current = {
                chapterIds: currentChapterIds,
+               accessSignature,
                pagination: null,
             };
          }
@@ -949,6 +961,10 @@ export default function DetailsScreen() {
    // Handle chapter press
    const handleChapterPress = useCallback(
       async (chapter: Chapter) => {
+         if (!canAccessChapter(chapter)) {
+            return;
+         }
+
          clickedChapterIdRef.current = chapter.id;
 
          const playlistData = playlistsByChapterId[chapter.id];
@@ -996,9 +1012,10 @@ export default function DetailsScreen() {
    );
 
    const handlePlayAll = useCallback(() => {
-      if (allChapters.length > 0) {
-         const sorted = [...allChapters].sort((a, b) => a.chapterNumber - b.chapterNumber);
-         void handleChapterPress(sorted[0]);
+      const sorted = [...allChapters].sort((a, b) => a.chapterNumber - b.chapterNumber);
+      const firstAccessible = sorted.find((chapter) => canAccessChapter(chapter));
+      if (firstAccessible) {
+         void handleChapterPress(firstAccessible);
       }
    }, [allChapters, handleChapterPress]);
 
@@ -1020,7 +1037,7 @@ export default function DetailsScreen() {
       const targetChapter = allChapters.find((chapter) => chapter.id === autoPlayChapterId);
       const playlistData = playlistsByChapterId[autoPlayChapterId];
 
-      if (targetChapter && playlistData) {
+      if (targetChapter && playlistData && canAccessChapter(targetChapter)) {
          autoPlayTriggeredRef.current = true;
          handleChapterPress(targetChapter);
       }
@@ -1272,7 +1289,11 @@ export default function DetailsScreen() {
       setCurrentPage(1);
       setAllChapters([]);
       setPagination(null);
-      lastProcessedDataRef.current = { chapterIds: new Set(), pagination: null };
+      lastProcessedDataRef.current = {
+         chapterIds: new Set(),
+         accessSignature: '',
+         pagination: null,
+      };
 
       const refetches: Promise<unknown>[] = [refetchAudiobook(), refetchFavorite()];
       if (id) {

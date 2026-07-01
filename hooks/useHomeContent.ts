@@ -43,6 +43,7 @@ function audiobookToContentItem(audiobook: Audiobook): ContentItem {
       title: audiobook.title,
       imageUri,
       badge,
+      minSubscriptionTier: audiobook.minSubscriptionTier,
    };
 }
 

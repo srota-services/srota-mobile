@@ -77,7 +77,7 @@ export interface Audiobook {
    updatedAt: string;
    audiobookTags: AudiobookTag[];
    genre?: Genre; // Deprecated - use genres array instead
-   genres: Array<{ name: string }>;
+   genres: { name: string }[];
    meta: Record<string, string> | null;
    minSubscriptionTier?: number;
    subscriptionAccess?: SubscriptionAccess;

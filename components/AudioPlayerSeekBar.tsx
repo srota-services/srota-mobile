@@ -208,7 +208,7 @@ export const AudioPlayerSeekBar: React.FC<AudioPlayerSeekBarProps> = ({
             handleSeekEnd();
          }
       },
-      [handleSeekEnd, seekCommittedShared, visualProgress]
+      [handleSeekEnd, seekCommittedShared, visualProgress, endPositionShared]
    );
 
    // Tap-to-seek: no pan onBegin, so no cancel/revert flicker.

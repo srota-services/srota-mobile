@@ -901,7 +901,7 @@ export default function DetailsScreen() {
             // No need to sync immediately here
          }
       }
-   }, [currentPlayingChapterId, currentChapterPlaylist, playlistsByChapterId, dispatch]);
+   }, [currentPlayingChapterId, currentChapterPlaylist, playlistsByChapterId, dispatch, audiobookId, user?.id]);
 
    useEffect(() => {
       if (isInitialized && !isAuthenticated) {
@@ -1011,7 +1011,7 @@ export default function DetailsScreen() {
             );
          }
       },
-      [dispatch, playlistsByChapterId, user?.id]
+      [dispatch, playlistsByChapterId, user?.id, allChapters.length]
    );
 
    const handlePlayAll = useCallback(() => {
@@ -1100,7 +1100,7 @@ export default function DetailsScreen() {
             <ActivityIndicator size="small" color={colors.app.red} />
          </View>
       );
-   }, [isLoadingChapters, pagination]);
+   }, [isLoadingChapters, pagination, colors.app.red, styles.footerLoader]);
 
    // Render empty state
    const renderEmpty = useCallback(() => {
@@ -1137,7 +1137,16 @@ export default function DetailsScreen() {
             <Text style={styles.emptyText}>No chapters available</Text>
          </View>
       );
-   }, [isAccessRestricted, isLoadingChapters, chaptersError, renderUpgradeSection]);
+   }, [
+      isAccessRestricted,
+      isLoadingChapters,
+      chaptersError,
+      renderUpgradeSection,
+      styles.emptyContainer,
+      styles.emptyText,
+      styles.errorText,
+      styles.upgradeSectionContainer,
+   ]);
 
    const handleDetailTabPress = useCallback((key: string) => {
       setDetailTab(key as 'chapters' | 'about');
@@ -1161,7 +1170,7 @@ export default function DetailsScreen() {
             <Text style={styles.aboutDescription}>{audiobook.description}</Text>
          </View>
       );
-   }, [audiobook, isAudiobookLoading]);
+   }, [audiobook, isAudiobookLoading, styles.aboutDescription, styles.aboutEmpty, styles.aboutSection]);
 
    // Render book header (above tab slide panels)
    const renderBookHeader = useCallback(() => {
@@ -1288,6 +1297,24 @@ export default function DetailsScreen() {
       aggregateRating,
       canRate,
       handleRate,
+      colors.like,
+      colors.text.primary,
+      colors.text.secondary,
+      styles.actionButtons,
+      styles.audiobookTitle,
+      styles.bookAuthor,
+      styles.bookCover,
+      styles.bookInfo,
+      styles.bookMeta,
+      styles.bookRow,
+      styles.downloadBtn,
+      styles.genreChip,
+      styles.genreChipText,
+      styles.genresContainer,
+      styles.playBtn,
+      styles.topActions,
+      styles.topActionsRight,
+      styles.topIconButton,
    ]);
 
    const handleDetailsRefresh = useCallback(async () => {

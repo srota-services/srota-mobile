@@ -232,7 +232,7 @@ export default function PublisherDetailScreen() {
             <Text style={styles.emptyText}>No audiobooks for this publisher yet.</Text>
          </View>
       );
-   }, [isLoading]);
+   }, [isLoading, styles.empty, styles.emptyText]);
 
    return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>

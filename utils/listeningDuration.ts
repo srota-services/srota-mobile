@@ -4,7 +4,7 @@
  */
 
 export function sumListeningProgressSeconds(
-   entries: ReadonlyArray<{ progress: number }>
+   entries: readonly { progress: number }[]
 ): number {
    return entries.reduce((total, entry) => {
       const value = entry.progress;
@@ -30,7 +30,7 @@ export function formatListeningDurationFromSeconds(totalSeconds: number): string
 
 /** Sum progress (seconds) across all user-audiobooks and format as hours/minutes. */
 export function formatProfileListeningHours(
-   entries: ReadonlyArray<{ progress: number }>
+   entries: readonly { progress: number }[]
 ): string {
    return formatListeningDurationFromSeconds(sumListeningProgressSeconds(entries));
 }

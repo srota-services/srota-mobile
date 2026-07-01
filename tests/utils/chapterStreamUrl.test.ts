@@ -1,3 +1,11 @@
+import { store } from '@/store';
+import { getMasterPlaylist, getPlaylist } from '@/services/streaming';
+import { writePlaybackPlaylistFile } from '@/utils/playlistCacheFile';
+import {
+   fetchChapterPlaybackSource,
+   resolveChapterPlaybackSource,
+} from '@/utils/chapterStreamUrl';
+
 jest.mock('react-native', () => ({
    Platform: { OS: 'android' },
 }));
@@ -16,14 +24,6 @@ jest.mock('@/services/streaming', () => ({
 jest.mock('@/utils/playlistCacheFile', () => ({
    writePlaybackPlaylistFile: jest.fn(),
 }));
-
-import { store } from '@/store';
-import { getMasterPlaylist, getPlaylist } from '@/services/streaming';
-import { writePlaybackPlaylistFile } from '@/utils/playlistCacheFile';
-import {
-   fetchChapterPlaybackSource,
-   resolveChapterPlaybackSource,
-} from '@/utils/chapterStreamUrl';
 
 const MASTER_PLAYLIST = `#EXTM3U
 #EXT-X-VERSION:3

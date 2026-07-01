@@ -32,7 +32,7 @@ interface HeroSectionProps {
    onPlayPress?: () => void;
    onMyListPress?: () => void;
    // Carousel props
-   carouselItems?: Array<{ id: string; title: string; author: string; posterUri?: string }>;
+   carouselItems?: { id: string; title: string; author: string; posterUri?: string }[];
    autoRotateInterval?: number; // milliseconds between rotations
    paused?: boolean; // Whether carousel should be paused (e.g., when screen is not focused)
    onIndexChange?: (index: number) => void; // Callback when carousel index changes
@@ -269,7 +269,7 @@ const HeroSectionComponent: React.FC<HeroSectionProps> = ({
          setCurrentIndex(0);
          textOpacity.value = 1;
       }
-   }, [carouselData.length]);
+   }, [carouselData.length, textOpacity]);
 
    // Get current item based on carousel index
    const currentItem = useMemo(() => {

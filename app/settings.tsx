@@ -1,12 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import {
-   View,
-   Text,
    StyleSheet,
    ScrollView,
-   TouchableOpacity,
    Switch,
-   Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
@@ -14,7 +10,7 @@ import * as Application from 'expo-application';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { SettingsMenuRow } from '@/components/settings/SettingsMenuRow';
-import { spacing, typography } from '@/theme';
+import { spacing } from '@/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 

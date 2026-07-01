@@ -278,7 +278,7 @@ export default function PlaylistDetailScreen() {
    });
 
    const { data: searchData, isFetching: isSearching } = useAudiobookSearch(debouncedSearch);
-   const searchResults = searchData?.data ?? [];
+   const searchResults = useMemo(() => searchData?.data ?? [], [searchData?.data]);
 
    const hasEditChanges = useMemo(() => {
       if (!playlist) return false;

@@ -357,8 +357,8 @@ export async function apiRequest<T>(
    const httpMethod = (options.method ?? 'GET').toUpperCase();
 
    // Guest users may only perform read (GET) requests.
-   // eslint-disable-next-line @typescript-eslint/no-require-imports
    const { checkAndBlockGuestMutation, createGuestMutationForbiddenError } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('@/utils/guestMutationGuard');
    if (await checkAndBlockGuestMutation(httpMethod, endpoint, options.body)) {
       throw createGuestMutationForbiddenError();

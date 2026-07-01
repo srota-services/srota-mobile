@@ -10,7 +10,7 @@ import {
    Modal,
    KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -193,7 +193,6 @@ export default function ManageDevicesScreen() {
       })
    );
 
-   const insets = useSafeAreaInsets();
    const limitMessage = useDeviceLimitStore((state) => state.message);
    const maxDevices = useDeviceLimitStore((state) => state.maxDevices);
    const storedDevices = useDeviceLimitStore((state) => state.registeredDevices);

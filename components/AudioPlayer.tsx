@@ -445,7 +445,7 @@ export const AudioPlayer: React.FC = React.memo(() => {
    const settings = useSelector((state: RootState) => state.settings);
    const [speedSheetVisible, setSpeedSheetVisible] = useState(false);
    const [sleepTimerSheetVisible, setSleepTimerSheetVisible] = useState(false);
-   const [sleepTimerTick, setSleepTimerTick] = useState(0);
+   const [, setSleepTimerTick] = useState(0);
 
    // Get user from Redux for session initialization
    const user = useSelector((state: RootState) => state.auth.user);
@@ -490,18 +490,14 @@ export const AudioPlayer: React.FC = React.memo(() => {
 
    const sleepTimerActive = isSleepTimerActive(settings);
 
-   const sleepTimerLabel = useMemo(() => {
-      if (!sleepTimerActive) {
-         return 'Off';
-      }
-      if (sleepTimerOption === 'endOfChapter') {
-         return 'End ch.';
-      }
-      if (sleepTimerEndsAt) {
-         return formatSleepTimerRemaining(sleepTimerEndsAt);
-      }
-      return formatSleepTimerLabel(sleepTimerOption);
-   }, [sleepTimerActive, sleepTimerOption, sleepTimerEndsAt, sleepTimerTick]);
+   const sleepTimerLabel =
+      !sleepTimerActive
+         ? 'Off'
+         : sleepTimerOption === 'endOfChapter'
+           ? 'End ch.'
+           : sleepTimerEndsAt
+             ? formatSleepTimerRemaining(sleepTimerEndsAt)
+             : formatSleepTimerLabel(sleepTimerOption);
 
    useEffect(() => {
       if (!sleepTimerActive || sleepTimerOption === 'endOfChapter' || !sleepTimerEndsAt) {
@@ -965,7 +961,7 @@ export const AudioPlayer: React.FC = React.memo(() => {
             minimizedOpacity.value = 0;
          }
       }
-   }, [isVisible, isMinimized, translateY, opacity, fullPlayerOpacity, minimizedOpacity, dragY, tabBarHeight, insets.bottom, maximizedBottomPosition, minimizedBottomPosition, hasBottomTabBar]);
+   }, [isVisible, isMinimized, translateY, opacity, fullPlayerOpacity, minimizedOpacity, dragY, tabBarHeight, insets.bottom, maximizedBottomPosition, minimizedBottomPosition, hasBottomTabBar, audiobookId, currentChapterId, user?.id]);
 
    // Animated styles - must be called before early return (Rules of Hooks)
    const containerAnimatedStyle = useAnimatedStyle(() => {

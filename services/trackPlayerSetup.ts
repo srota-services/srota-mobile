@@ -71,7 +71,6 @@ export async function updateTrackPlayerOptions(
       forwardJumpInterval: skipDurationSeconds,
       backwardJumpInterval: skipDurationSeconds,
       progressUpdateEventInterval: 1,
-      repeatMode: RepeatMode.Off,
       ratingType: Platform.OS === 'android' ? RatingType.Heart : undefined,
       likeOptions: {
          title: speedLabel,
@@ -93,4 +92,6 @@ export async function updateTrackPlayerOptions(
            }
          : {}),
    });
+
+   await TrackPlayer.setRepeatMode(RepeatMode.Off);
 }

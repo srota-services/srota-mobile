@@ -396,7 +396,7 @@ export default function VerifyEmailOtpScreen() {
 
                   {/* Resend OTP Button */}
                   <View style={styles.resendContainer}>
-                     <Text style={styles.resendLabel}>Didn't receive the OTP? </Text>
+                     <Text style={styles.resendLabel}>{"Didn't receive the OTP? "}</Text>
                      {resendCountdown > 0 ? (
                         <Text style={styles.resendCountdown}>
                            Resend OTP in {resendCountdown}s

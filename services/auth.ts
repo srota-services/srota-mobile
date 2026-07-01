@@ -306,9 +306,7 @@ export async function resendRegistrationOTP(
 /**
  * Request password change OTP request payload
  */
-export interface RequestPasswordChangeOtpRequest {
-   // Empty - uses authenticated user's email
-}
+export type RequestPasswordChangeOtpRequest = Record<string, never>;
 
 /**
  * Request password change OTP response

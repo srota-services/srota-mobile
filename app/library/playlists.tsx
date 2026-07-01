@@ -103,7 +103,7 @@ export default function LibraryPlaylistsScreen() {
             />
          </View>
       ),
-      []
+      [styles.gridItem]
    );
 
    return (

@@ -14,7 +14,7 @@ import { queryKeys } from '@/constants/queryKeys';
 import { queryClient } from '@/utils/queryClient';
 
 export async function fetchAllChapters(audiobookId: string): Promise<Chapter[]> {
-   let allChapters: Chapter[] = [];
+   const allChapters: Chapter[] = [];
    let page = 1;
    let hasNextPage = true;
 
@@ -102,7 +102,6 @@ export interface FinalizeAudiobookPlaybackParams {
    dispatch: AppDispatch;
    audiobookId: string;
    currentChapterId: string;
-   isVisible: boolean;
    totalDuration: number;
 }
 
@@ -110,7 +109,7 @@ export interface FinalizeAudiobookPlaybackParams {
 export async function finalizeAudiobookPlayback(
    params: FinalizeAudiobookPlaybackParams
 ): Promise<void> {
-   const { dispatch, audiobookId, currentChapterId, isVisible, totalDuration } = params;
+   const { dispatch, audiobookId, currentChapterId, totalDuration } = params;
 
    try {
       await TrackPlayer.pause();
@@ -129,7 +128,7 @@ export async function finalizeAudiobookPlayback(
 }
 
 export async function advanceToNextChapter(params: AdvanceToNextChapterParams): Promise<void> {
-   const { dispatch, audiobookId, currentChapterId, isVisible, totalDuration, onChapterSwitched } =
+   const { dispatch, audiobookId, currentChapterId, totalDuration, onChapterSwitched } =
       params;
 
    try {
@@ -155,7 +154,6 @@ export async function advanceToNextChapter(params: AdvanceToNextChapterParams): 
          dispatch,
          audiobookId,
          currentChapterId,
-         isVisible,
          totalDuration,
       });
    } catch (error) {
@@ -164,7 +162,6 @@ export async function advanceToNextChapter(params: AdvanceToNextChapterParams): 
          dispatch,
          audiobookId,
          currentChapterId,
-         isVisible,
          totalDuration,
       });
    }

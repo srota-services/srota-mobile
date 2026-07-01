@@ -1,6 +1,6 @@
 export const TOAST_DURATION_MS = 3000;
 
-export type ToastType = 'success' | 'error';
+export type ToastType = 'success' | 'error' | 'info';
 
 export interface ToastPayload {
    message: string;

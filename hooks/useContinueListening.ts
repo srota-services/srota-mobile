@@ -100,7 +100,7 @@ export function useContinueListening() {
       audiobookId ?? ''
    );
 
-   const chapters = chaptersData?.data ?? [];
+   const chapters = useMemo(() => chaptersData?.data ?? [], [chaptersData?.data]);
 
    const {
       data: discoveredChapter,

@@ -33,6 +33,7 @@ import { SkeletonChapterRow, SkeletonDetailsHeader, SkeletonDetailsAbout } from 
 import { TabUnderline } from '@/components/TabUnderline';
 import { TabSlideView } from '@/components/TabSlideView';
 import { formatDuration } from '@/utils/duration';
+import { canAccessChapter, getChapterListSyncSignature } from '@/utils/chapterAccess';
 import { resolveAudiobookImageUrl } from '@/utils/imageAssets';
 import { useDispatch } from 'react-redux';
 import { setTotalDuration, play } from '@/store/player';
@@ -45,6 +46,7 @@ import { useFavorite, useFavoriteMutations } from '@/hooks/useFavorite';
 import { useReviewMutation } from '@/hooks/useReviewMutation';
 import { AddToPlaylistSheet } from '@/components/AddToPlaylistSheet';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useSubscriptionPlans } from '@/hooks/useSubscriptionPlans';
 
 export default function DetailsScreen() {
    const { colors } = useTheme();
@@ -629,6 +631,8 @@ export default function DetailsScreen() {
    } = useAudiobook(id || '');
    useNotFoundRedirect(isNotFound, 'This audiobook is no longer available.');
 
+   const { plans: subscriptionPlans } = useSubscriptionPlans();
+
    const audiobook = audiobookData?.data;
 
    const { data: favorite, refetch: refetchFavorite, isRefetching: isFavoriteRefetching } =
@@ -691,15 +695,20 @@ export default function DetailsScreen() {
    // Track last processed data to prevent infinite loops
    const lastProcessedDataRef = useRef<{
       chapterIds: Set<string>;
+      accessSignature: string;
       pagination: { hasNextPage: boolean; currentPage: number; totalPages: number } | null;
-   }>({ chapterIds: new Set(), pagination: null });
+   }>({ chapterIds: new Set(), accessSignature: '', pagination: null });
 
    // Clear chapter list when subscription does not allow access
    useEffect(() => {
       if (isAccessRestricted) {
          setAllChapters([]);
          setPagination(null);
-         lastProcessedDataRef.current = { chapterIds: new Set(), pagination: null };
+         lastProcessedDataRef.current = {
+            chapterIds: new Set(),
+            accessSignature: '',
+            pagination: null,
+         };
       }
    }, [isAccessRestricted]);
 
@@ -737,6 +746,9 @@ export default function DetailsScreen() {
       // Check if data actually changed by comparing chapter IDs
       const currentChapterIds = new Set(uniqueChapters.map((c) => c.id));
       const lastChapterIds = lastProcessedDataRef.current.chapterIds;
+      const accessSignature = getChapterListSyncSignature(uniqueChapters);
+      const accessChanged =
+         accessSignature !== lastProcessedDataRef.current.accessSignature;
 
       // Check if sets are different
       let paginationChanged = false;
@@ -751,7 +763,8 @@ export default function DetailsScreen() {
       const hasChanged =
          currentChapterIds.size !== lastChapterIds.size ||
          !Array.from(currentChapterIds).every((id) => lastChapterIds.has(id)) ||
-         paginationChanged;
+         paginationChanged ||
+         accessChanged;
 
       // Only update state if data actually changed
       if (hasChanged) {
@@ -760,11 +773,13 @@ export default function DetailsScreen() {
             setPagination(latestPagination);
             lastProcessedDataRef.current = {
                chapterIds: currentChapterIds,
+               accessSignature,
                pagination: latestPagination,
             };
          } else {
             lastProcessedDataRef.current = {
                chapterIds: currentChapterIds,
+               accessSignature,
                pagination: null,
             };
          }
@@ -886,7 +901,7 @@ export default function DetailsScreen() {
             // No need to sync immediately here
          }
       }
-   }, [currentPlayingChapterId, currentChapterPlaylist, playlistsByChapterId, dispatch]);
+   }, [currentPlayingChapterId, currentChapterPlaylist, playlistsByChapterId, dispatch, audiobookId, user?.id]);
 
    useEffect(() => {
       if (isInitialized && !isAuthenticated) {
@@ -949,6 +964,10 @@ export default function DetailsScreen() {
    // Handle chapter press
    const handleChapterPress = useCallback(
       async (chapter: Chapter) => {
+         if (!canAccessChapter(chapter)) {
+            return;
+         }
+
          clickedChapterIdRef.current = chapter.id;
 
          const playlistData = playlistsByChapterId[chapter.id];
@@ -992,13 +1011,14 @@ export default function DetailsScreen() {
             );
          }
       },
-      [dispatch, playlistsByChapterId, user?.id]
+      [dispatch, playlistsByChapterId, user?.id, allChapters.length]
    );
 
    const handlePlayAll = useCallback(() => {
-      if (allChapters.length > 0) {
-         const sorted = [...allChapters].sort((a, b) => a.chapterNumber - b.chapterNumber);
-         void handleChapterPress(sorted[0]);
+      const sorted = [...allChapters].sort((a, b) => a.chapterNumber - b.chapterNumber);
+      const firstAccessible = sorted.find((chapter) => canAccessChapter(chapter));
+      if (firstAccessible) {
+         void handleChapterPress(firstAccessible);
       }
    }, [allChapters, handleChapterPress]);
 
@@ -1020,7 +1040,7 @@ export default function DetailsScreen() {
       const targetChapter = allChapters.find((chapter) => chapter.id === autoPlayChapterId);
       const playlistData = playlistsByChapterId[autoPlayChapterId];
 
-      if (targetChapter && playlistData) {
+      if (targetChapter && playlistData && canAccessChapter(targetChapter)) {
          autoPlayTriggeredRef.current = true;
          handleChapterPress(targetChapter);
       }
@@ -1057,6 +1077,7 @@ export default function DetailsScreen() {
                }
                isActive={isActiveChapter}
                onDownloadPress={() => {}}
+               subscriptionPlans={subscriptionPlans}
             />
          );
       },
@@ -1065,6 +1086,7 @@ export default function DetailsScreen() {
          currentPlayingChapterId,
          isPlaying,
          isPlayerVisible,
+         subscriptionPlans,
       ]
    );
 
@@ -1078,7 +1100,7 @@ export default function DetailsScreen() {
             <ActivityIndicator size="small" color={colors.app.red} />
          </View>
       );
-   }, [isLoadingChapters, pagination]);
+   }, [isLoadingChapters, pagination, colors.app.red, styles.footerLoader]);
 
    // Render empty state
    const renderEmpty = useCallback(() => {
@@ -1115,7 +1137,16 @@ export default function DetailsScreen() {
             <Text style={styles.emptyText}>No chapters available</Text>
          </View>
       );
-   }, [isAccessRestricted, isLoadingChapters, chaptersError, renderUpgradeSection]);
+   }, [
+      isAccessRestricted,
+      isLoadingChapters,
+      chaptersError,
+      renderUpgradeSection,
+      styles.emptyContainer,
+      styles.emptyText,
+      styles.errorText,
+      styles.upgradeSectionContainer,
+   ]);
 
    const handleDetailTabPress = useCallback((key: string) => {
       setDetailTab(key as 'chapters' | 'about');
@@ -1139,7 +1170,7 @@ export default function DetailsScreen() {
             <Text style={styles.aboutDescription}>{audiobook.description}</Text>
          </View>
       );
-   }, [audiobook, isAudiobookLoading]);
+   }, [audiobook, isAudiobookLoading, styles.aboutDescription, styles.aboutEmpty, styles.aboutSection]);
 
    // Render book header (above tab slide panels)
    const renderBookHeader = useCallback(() => {
@@ -1266,13 +1297,35 @@ export default function DetailsScreen() {
       aggregateRating,
       canRate,
       handleRate,
+      colors.like,
+      colors.text.primary,
+      colors.text.secondary,
+      styles.actionButtons,
+      styles.audiobookTitle,
+      styles.bookAuthor,
+      styles.bookCover,
+      styles.bookInfo,
+      styles.bookMeta,
+      styles.bookRow,
+      styles.downloadBtn,
+      styles.genreChip,
+      styles.genreChipText,
+      styles.genresContainer,
+      styles.playBtn,
+      styles.topActions,
+      styles.topActionsRight,
+      styles.topIconButton,
    ]);
 
    const handleDetailsRefresh = useCallback(async () => {
       setCurrentPage(1);
       setAllChapters([]);
       setPagination(null);
-      lastProcessedDataRef.current = { chapterIds: new Set(), pagination: null };
+      lastProcessedDataRef.current = {
+         chapterIds: new Set(),
+         accessSignature: '',
+         pagination: null,
+      };
 
       const refetches: Promise<unknown>[] = [refetchAudiobook(), refetchFavorite()];
       if (id) {

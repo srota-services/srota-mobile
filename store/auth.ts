@@ -10,11 +10,18 @@ import { fetchAndStoreDeviceDetails } from '@/services/device';
 import { fetchMergedUserProfile, UserProfile } from '@/services/user';
 import { useOnboardingStore } from '@/store/onboarding';
 import { isOnboardingProfileIncomplete } from '@/utils/onboardingProfile';
+import { isGuestUser } from '@/utils/guestUser';
 
 function applyOnboardingRequirementFromProfile(
-   state: { requiresOnboarding: boolean },
+   state: { requiresOnboarding: boolean; user: User | null },
    profile: UserProfile
 ): void {
+   if (isGuestUser(state.user)) {
+      state.requiresOnboarding = false;
+      persistOnboardingPending(false);
+      return;
+   }
+
    if (isOnboardingProfileIncomplete(profile)) {
       state.requiresOnboarding = true;
       persistOnboardingPending(true);
@@ -76,6 +83,58 @@ function persistOnboardingPending(required: boolean): void {
    }
 }
 
+function persistAuthSessionToSecureStore(
+   accessToken: string,
+   refreshToken: string,
+   user: User,
+   authProvider: AuthProvider,
+   options?: { clearProfile?: boolean }
+): void {
+   SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken).catch((error) =>
+      console.error('Error saving access token:', error)
+   );
+   SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken).catch((error) =>
+      console.error('Error saving refresh token:', error)
+   );
+   SecureStore.setItemAsync(USER_KEY, JSON.stringify(user)).catch((error) =>
+      console.error('Error saving user data:', error)
+   );
+   SecureStore.setItemAsync(AUTH_PROVIDER_KEY, authProvider).catch((error) =>
+      console.error('[Auth] Error saving auth provider:', error)
+   );
+
+   if (options?.clearProfile) {
+      SecureStore.deleteItemAsync(USER_PROFILE_KEY).catch((error) =>
+         console.error('[Auth] Error clearing previous user profile from SecureStore:', error)
+      );
+   }
+}
+
+function resolveRequiresOnboarding(
+   user: User | null,
+   userProfile: UserProfile | null,
+   onboardingPending: string | null
+): boolean {
+   if (isGuestUser(user)) {
+      return false;
+   }
+
+   return (
+      onboardingPending === 'true' || isOnboardingProfileIncomplete(userProfile)
+   );
+}
+
+function resolveStoredAuthProvider(
+   authProviderRaw: string | null,
+   user: User | null
+): AuthProvider | null {
+   if (authProviderRaw && isAuthProvider(authProviderRaw)) {
+      return authProviderRaw;
+   }
+
+   return isGuestUser(user) ? 'guest' : null;
+}
+
 /**
  * Async thunk to initialize auth state from secure storage
  * Loads persisted accessToken, refreshToken, user data, and user profile on app startup
@@ -91,36 +150,38 @@ export const initializeAuth = createAsyncThunk(
       authProvider: AuthProvider | null;
    }> => {
       try {
-         // Load accessToken from secure store
          const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-
-         // Load refreshToken from secure store
          const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-
-         // Load user data from secure store (non-sensitive, but still stored securely)
          const userJson = await SecureStore.getItemAsync(USER_KEY);
          const user = userJson ? (JSON.parse(userJson) as User) : null;
-
-         // Load user profile from secure store
          const profileJson = await SecureStore.getItemAsync(USER_PROFILE_KEY);
          const userProfile = profileJson ? (JSON.parse(profileJson) as UserProfile) : null;
-
          const onboardingPending = await SecureStore.getItemAsync(ONBOARDING_PENDING_KEY);
-         const requiresOnboarding =
-            onboardingPending === 'true' ||
-            isOnboardingProfileIncomplete(userProfile);
-
          const authProviderRaw = await SecureStore.getItemAsync(AUTH_PROVIDER_KEY);
-         const authProvider =
-            authProviderRaw && isAuthProvider(authProviderRaw) ? authProviderRaw : null;
+         const authProvider = resolveStoredAuthProvider(authProviderRaw, user);
+
+         if (accessToken) {
+            return {
+               accessToken,
+               refreshToken,
+               user,
+               userProfile,
+               requiresOnboarding: resolveRequiresOnboarding(
+                  user,
+                  userProfile,
+                  onboardingPending
+               ),
+               authProvider,
+            };
+         }
 
          return {
-            accessToken,
-            refreshToken,
-            user,
-            userProfile,
-            requiresOnboarding,
-            authProvider,
+            accessToken: null,
+            refreshToken: null,
+            user: null,
+            userProfile: null,
+            requiresOnboarding: false,
+            authProvider: null,
          };
       } catch (error) {
          console.error('Error initializing auth:', error);
@@ -179,7 +240,11 @@ const authSlice = createSlice({
          state.user = action.payload.user;
          state.authProvider = action.payload.authProvider;
          state.isAuthenticated = true;
-         state.requiresOnboarding = action.payload.requiresOnboarding === true;
+
+         const guestUser = isGuestUser(action.payload.user);
+         state.requiresOnboarding = guestUser
+            ? false
+            : action.payload.requiresOnboarding === true;
          if (state.requiresOnboarding) {
             persistOnboardingPending(true);
          }
@@ -187,26 +252,16 @@ const authSlice = createSlice({
          // Clear previous user profile when new account logs in
          // This ensures multiple accounts on same device don't mix profiles
          state.userProfile = null;
-         state.profileFetched = false;
+         // Guest sessions skip profile fetch; auth guard waits on profileFetched
+         state.profileFetched = guestUser;
 
          // Persist to secure store
-         SecureStore.setItemAsync(ACCESS_TOKEN_KEY, action.payload.accessToken).catch(
-            (error) => console.error('Error saving access token:', error)
-         );
-         SecureStore.setItemAsync(REFRESH_TOKEN_KEY, action.payload.refreshToken).catch(
-            (error) => console.error('Error saving refresh token:', error)
-         );
-         SecureStore.setItemAsync(USER_KEY, JSON.stringify(action.payload.user)).catch(
-            (error) => console.error('Error saving user data:', error)
-         );
-         SecureStore.setItemAsync(AUTH_PROVIDER_KEY, action.payload.authProvider).catch(
-            (error) => console.error('[Auth] Error saving auth provider:', error)
-         );
-
-         // Clear previous user profile from SecureStore when new account logs in
-         // New profile will be saved when fetchUserProfile completes
-         SecureStore.deleteItemAsync(USER_PROFILE_KEY).catch((error) =>
-            console.error('[Auth] Error clearing previous user profile from SecureStore:', error)
+         persistAuthSessionToSecureStore(
+            action.payload.accessToken,
+            action.payload.refreshToken,
+            action.payload.user,
+            action.payload.authProvider,
+            { clearProfile: true }
          );
 
          // Fetch device name, platform, and persistent device UUID on login/signup
@@ -266,11 +321,14 @@ const authSlice = createSlice({
             state.userProfile = action.payload.userProfile;
             state.profileFetched = !!action.payload.userProfile; // Mark as fetched if profile exists
             state.isAuthenticated = !!action.payload.accessToken;
-            state.requiresOnboarding = action.payload.requiresOnboarding;
+            state.requiresOnboarding = isGuestUser(action.payload.user)
+               ? false
+               : action.payload.requiresOnboarding;
             state.authProvider = action.payload.authProvider;
             state.isInitialized = true;
          })
-         .addCase(initializeAuth.rejected, (state) => {
+         .addCase(initializeAuth.rejected, (state, action) => {
+            console.error('Error initializing auth:', action.error);
             state.accessToken = null;
             state.refreshToken = null;
             state.user = null;

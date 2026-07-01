@@ -16,9 +16,14 @@ export type { DeviceDetails } from './device';
 /**
  * How the user authenticated (stored locally for logout handling)
  */
-export type AuthProvider = 'email' | 'email_registration' | 'google';
+export type AuthProvider = 'email' | 'email_registration' | 'google' | 'guest';
 
-const AUTH_PROVIDERS: AuthProvider[] = ['email', 'email_registration', 'google'];
+const AUTH_PROVIDERS: AuthProvider[] = [
+   'email',
+   'email_registration',
+   'google',
+   'guest',
+];
 
 export function isAuthProvider(value: string): value is AuthProvider {
    return (AUTH_PROVIDERS as string[]).includes(value);
@@ -57,6 +62,14 @@ export interface LoginResponse {
    accessToken: string;
    refreshToken: string;
    user: User;
+}
+
+/**
+ * Guest session API request body
+ */
+export interface GuestAuthRequestBody {
+   clientType: 'mobile';
+   device: DeviceDetails;
 }
 
 /**
@@ -103,6 +116,32 @@ export interface VerifyOtpResponse {
    accessToken: string;
    refreshToken: string;
    user: User;
+}
+
+/**
+ * Create or resume an anonymous guest session
+ * Calls POST /auth/guest with mobile client type and device context
+ */
+export async function createGuestSession(): Promise<LoginResponse> {
+   try {
+      const device = await fetchAndStoreDeviceDetails();
+      const body: GuestAuthRequestBody = { clientType: 'mobile', device };
+
+      const response = await post<LoginResponse>('/auth/guest', body, false, true);
+      return response.data;
+   } catch (error) {
+      console.error('[Auth Service] Guest session error', {
+         error,
+         errorType: error instanceof Error ? error.constructor.name : typeof error,
+         errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      if (error instanceof ApiError) {
+         throw error;
+      }
+      throw new Error(
+         `Guest session failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+   }
 }
 
 /**
@@ -267,9 +306,7 @@ export async function resendRegistrationOTP(
 /**
  * Request password change OTP request payload
  */
-export interface RequestPasswordChangeOtpRequest {
-   // Empty - uses authenticated user's email
-}
+export type RequestPasswordChangeOtpRequest = Record<string, never>;
 
 /**
  * Request password change OTP response

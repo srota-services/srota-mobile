@@ -21,7 +21,7 @@ interface HeaderProps {
  * Uses same display name logic as My Audiobook screen (profile screen)
  */
 const HeaderComponent: React.FC<HeaderProps> = ({
-   userName,
+   userName: _userName,
    onDownloadPress,
    onSearchPress,
    onNotificationPress,
@@ -81,7 +81,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
          }
       }
       return ''; // Fallback if profile not loaded yet
-   }, [userProfile, userName]);
+   }, [userProfile]);
    return (
       <SafeAreaView edges={['top']} style={styles.container}>
          <View style={styles.content}>

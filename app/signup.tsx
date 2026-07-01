@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
    View,
    Text,
@@ -10,16 +10,23 @@ import {
    Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, router } from 'expo-router';
-import { useDispatch } from 'react-redux';
+import { Stack, router, type Href } from 'expo-router';
+import { useSelector } from 'react-redux';
 import { TextInput } from '@/components/TextInput';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import { spacing, typography } from '@/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { signup } from '@/services/auth';
-import { AppDispatch } from '@/store';
+import { RootState } from '@/store';
 import { ApiError } from '@/services/api';
+import {
+   getSignupWizardProgress,
+   persistSignupWizardProgress,
+   resolveSignupWizardRoute,
+   signupWizardRouteToHref,
+} from '@/utils/signupWizardStorage';
+import { useSignupWizardStepPersistence } from '@/hooks/useSignupWizardStepPersistence';
 import {
    validateIndianContact,
    validateRegistrationPassword,
@@ -144,7 +151,10 @@ export default function SignUpScreen() {
       })
    );
 
-   const dispatch = useDispatch<AppDispatch>();
+   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+   const requiresOnboarding = useSelector(
+      (state: RootState) => state.auth.requiresOnboarding
+   );
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
    const [confirmPassword, setConfirmPassword] = useState('');
@@ -152,6 +162,23 @@ export default function SignUpScreen() {
    const [contact, setContact] = useState('');
    const [isLoading, setIsLoading] = useState(false);
    const [error, setError] = useState<string | null>(null);
+   const [draftRestored, setDraftRestored] = useState(false);
+
+   useSignupWizardStepPersistence('signup');
+
+   useEffect(() => {
+      if (draftRestored) {
+         return;
+      }
+
+      const draft = getSignupWizardProgress()?.signupDraft;
+      if (draft) {
+         setEmail(draft.email);
+         setAddress(draft.address);
+         setContact(draft.contact);
+      }
+      setDraftRestored(true);
+   }, [draftRestored]);
 
    const handleSignUp = useCallback(async () => {
       Keyboard.dismiss();
@@ -191,18 +218,41 @@ export default function SignUpScreen() {
       setIsLoading(true);
 
       try {
+         if (isAuthenticated && requiresOnboarding) {
+            const progress = getSignupWizardProgress();
+            const wizardRoute = resolveSignupWizardRoute(progress, {
+               isAuthenticated,
+               requiresOnboarding,
+            });
+            router.replace(signupWizardRouteToHref(wizardRoute) as Href);
+            return;
+         }
+
+         const trimmedEmail = email.trim();
+         const trimmedAddress = address.trim();
+         const trimmedContact = contact.trim();
+
          await signup({
-            email: email.trim(),
+            email: trimmedEmail,
             password,
             confirmPassword,
-            address: address.trim(),
-            contact: contact.trim(),
+            address: trimmedAddress,
+            contact: trimmedContact,
          });
 
-         // Redirect to OTP verification screen with email
+         await persistSignupWizardProgress({
+            step: 'verify_otp',
+            email: trimmedEmail,
+            signupDraft: {
+               email: trimmedEmail,
+               address: trimmedAddress,
+               contact: trimmedContact,
+            },
+         });
+
          router.push({
             pathname: '/verify-otp',
-            params: { email: email.trim() },
+            params: { email: trimmedEmail, autoResendOtp: 'false' },
          });
       } catch (err) {
          // Handle API errors
@@ -232,7 +282,7 @@ export default function SignUpScreen() {
       } finally {
          setIsLoading(false);
       }
-   }, [email, password, confirmPassword, address, contact, dispatch]);
+   }, [email, password, confirmPassword, address, contact, isAuthenticated, requiresOnboarding]);
 
    const handleNavigateToSignIn = useCallback(() => {
       Keyboard.dismiss();
@@ -337,6 +387,7 @@ export default function SignUpScreen() {
                         onPress={handleSignUp}
                         loading={isLoading}
                         disabled={isLoading}
+                        variant="outlined"
                         style={styles.authButton}
                         testID="signup-button"
                      />

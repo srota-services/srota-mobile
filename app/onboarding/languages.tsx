@@ -1,11 +1,16 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { WizardScreenLayout } from '@/components/WizardScreenLayout';
 import { ScatteredLanguagePills } from '@/components/onboarding/ScatteredLanguagePills';
-import { useOnboardingStore, MAX_LANGUAGE_SELECTIONS } from '@/store/onboarding';
+import {
+   useOnboardingStore,
+   MAX_LANGUAGE_SELECTIONS,
+   hydrateOnboardingStoreFromProgress,
+} from '@/store/onboarding';
 import { spacing, typography } from '@/theme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { useSignupWizardStepPersistence } from '@/hooks/useSignupWizardStepPersistence';
 
 const TOTAL_STEPS = 4;
 
@@ -31,6 +36,12 @@ export default function OnboardingLanguagesScreen() {
 
    const languageCodes = useOnboardingStore((s) => s.languageCodes);
    const toggleLanguageCode = useOnboardingStore((s) => s.toggleLanguageCode);
+
+   useSignupWizardStepPersistence('onboarding_languages');
+
+   useEffect(() => {
+      hydrateOnboardingStoreFromProgress();
+   }, []);
 
    const [error, setError] = useState<string | null>(null);
 

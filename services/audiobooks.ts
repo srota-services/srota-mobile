@@ -41,11 +41,13 @@ export interface AudiobookTag {
 /**
  * Subscription access info returned with a single audiobook
  */
+export type SubscriptionTierCode = 'BASE' | 'STANDARD' | 'PREMIUM';
+
 export interface SubscriptionAccess {
    canAccess: boolean;
    message?: string;
-   requiredTier?: number;
-   userTier?: number;
+   requiredTier?: SubscriptionTierCode | number;
+   userTier?: SubscriptionTierCode | number | null;
 }
 
 /**
@@ -75,7 +77,7 @@ export interface Audiobook {
    updatedAt: string;
    audiobookTags: AudiobookTag[];
    genre?: Genre; // Deprecated - use genres array instead
-   genres: Array<{ name: string }>;
+   genres: { name: string }[];
    meta: Record<string, string> | null;
    minSubscriptionTier?: number;
    subscriptionAccess?: SubscriptionAccess;
@@ -163,6 +165,7 @@ export interface Chapter {
    bookmarks: unknown[];
    notes: unknown[];
    chapterProgress: unknown[];
+   subscriptionAccess?: SubscriptionAccess;
 }
 
 /**

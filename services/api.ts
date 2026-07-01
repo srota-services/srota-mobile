@@ -354,6 +354,16 @@ export async function apiRequest<T>(
          : apiConfig.baseURL;
    const url = `${baseURL}${endpoint}`;
 
+   const httpMethod = (options.method ?? 'GET').toUpperCase();
+
+   // Guest users may only perform read (GET) requests.
+   const { checkAndBlockGuestMutation, createGuestMutationForbiddenError } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/utils/guestMutationGuard');
+   if (await checkAndBlockGuestMutation(httpMethod, endpoint, options.body)) {
+      throw createGuestMutationForbiddenError();
+   }
+
    // Get auth headers if needed
    const authHeaders = useAuth ? getAuthHeaders() : {};
 

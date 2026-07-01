@@ -19,7 +19,7 @@ import { SecondaryButton } from '@/components/SecondaryButton';
 import { spacing, typography, borderRadius } from '@/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import { login, googleAuth } from '@/services/auth';
+import { login, googleAuth, createGuestSession } from '@/services/auth';
 import { parseIsNewUserFlag } from '@/utils/onboardingProfile';
 import {
    fetchDeviceLocationInMemory,
@@ -183,6 +183,29 @@ export default function SignInScreen() {
          },
       }),
    },
+   guestLinkButton: {
+      alignSelf: 'center',
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.md,
+      minHeight: 32,
+      justifyContent: 'center',
+   },
+   guestLinkText: {
+      fontSize: typography.fontSize.sm,
+      color: t.colors.primary[400],
+      ...Platform.select({
+         ios: {
+            fontFamily: 'System',
+            fontWeight: '500',
+         },
+         android: {
+            fontFamily: 'sans-serif-medium',
+         },
+      }),
+   },
+   guestLinkTextDisabled: {
+      color: t.colors.text.muted,
+   },
    signUpLinkContainer: {
       flexDirection: 'row',
       justifyContent: 'center',
@@ -224,6 +247,7 @@ export default function SignInScreen() {
    const [password, setPassword] = useState('');
    const [isLoadingSignIn, setIsLoadingSignIn] = useState(false);
    const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
+   const [isLoadingGuest, setIsLoadingGuest] = useState(false);
    const [error, setError] = useState<string | null>(null);
    const [hasStoredProfile, setHasStoredProfile] = useState<boolean | null>(null);
 
@@ -388,6 +412,52 @@ export default function SignInScreen() {
       }
    }, [dispatch]);
 
+   const handleGuestLogin = useCallback(async () => {
+      Keyboard.dismiss();
+      setError(null);
+      setIsLoadingGuest(true);
+
+      try {
+         const response = await createGuestSession();
+
+         dispatch(
+            setAuth({
+               accessToken: response.accessToken,
+               refreshToken: response.refreshToken,
+               user: response.user,
+               authProvider: 'guest',
+            })
+         );
+      } catch (err) {
+         if (err instanceof ApiError) {
+            if (isDeviceLimitExceededError(err.data)) {
+               return;
+            }
+
+            const errorData = err.data;
+            setError(
+               getAuthApiErrorMessage(errorData) ||
+                  (errorData as { message?: string } | undefined)?.message ||
+                  'Guest login failed. Please try again.'
+            );
+         } else {
+            const errorMessage =
+               err instanceof Error ? err.message : 'Unknown error';
+            console.error('[SignIn] Guest login error:', errorMessage);
+
+            let userMessage = 'Network error. Please check your connection and try again.';
+            if (errorMessage.includes('Network request failed')) {
+               userMessage =
+                  'Cannot connect to server. If testing on a physical device, set EXPO_PUBLIC_AUTH_API_URL to your computer\'s IP address (e.g., http://192.168.1.100:8080)';
+            }
+
+            setError(userMessage);
+         }
+      } finally {
+         setIsLoadingGuest(false);
+      }
+   }, [dispatch]);
+
    const handleForgotPassword = useCallback(() => {
       Keyboard.dismiss();
       console.log('Forgot password pressed');
@@ -480,7 +550,8 @@ export default function SignInScreen() {
                         title="Sign In"
                         onPress={handleSignIn}
                         loading={isLoadingSignIn}
-                        disabled={isLoadingSignIn || isLoadingGoogle}
+                        disabled={isLoadingSignIn || isLoadingGoogle || isLoadingGuest}
+                        variant="outlined"
                         style={styles.authButton}
                         testID="signin-button"
                      />
@@ -497,7 +568,7 @@ export default function SignInScreen() {
                         style={[styles.googleButton, isLoadingGoogle && styles.googleButtonDisabled]}
                         onPress={handleGoogleLogin}
                         activeOpacity={0.8}
-                        disabled={isLoadingSignIn || isLoadingGoogle}
+                        disabled={isLoadingSignIn || isLoadingGoogle || isLoadingGuest}
                         testID="google-login-button"
                      >
                         {isLoadingGoogle ? (
@@ -514,6 +585,28 @@ export default function SignInScreen() {
                                  Continue with Google
                               </Text>
                            </>
+                        )}
+                     </TouchableOpacity>
+
+                     <TouchableOpacity
+                        onPress={handleGuestLogin}
+                        style={styles.guestLinkButton}
+                        activeOpacity={0.7}
+                        disabled={isLoadingSignIn || isLoadingGoogle || isLoadingGuest}
+                        testID="guest-login-button"
+                     >
+                        {isLoadingGuest ? (
+                           <ActivityIndicator size="small" color={colors.primary[400]} />
+                        ) : (
+                           <Text
+                              style={[
+                                 styles.guestLinkText,
+                                 (isLoadingSignIn || isLoadingGoogle) &&
+                                    styles.guestLinkTextDisabled,
+                              ]}
+                           >
+                              Login as Guest
+                           </Text>
                         )}
                      </TouchableOpacity>
 

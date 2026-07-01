@@ -20,11 +20,11 @@ import {
    confirmDeviceRemoval,
    resendDeviceRemovalOtp,
 } from '@/services/devices';
+import { useDeviceLimitStore } from '@/store/deviceLimit';
+import { getAuthApiErrorMessage } from '@/utils/authApiErrors';
 
 /** Minimum seconds before the user can resend the device removal OTP */
 const RESEND_OTP_COOLDOWN_SECONDS = 30;
-import { useDeviceLimitStore } from '@/store/deviceLimit';
-import { getAuthApiErrorMessage } from '@/utils/authApiErrors';
 
 /**
  * OTP verification screen for removing a registered device when device limit is exceeded.

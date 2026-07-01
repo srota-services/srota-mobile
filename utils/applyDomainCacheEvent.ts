@@ -4,7 +4,10 @@ import {
    getDeletedResourceIds,
    markResourceDeleted,
 } from '@/utils/deletedResourceRegistry';
-import type { CacheInvalidateEvent } from '@/types/domainCacheEvents';
+import type {
+   ApplyDomainCacheEventContext,
+   CacheInvalidateEvent,
+} from '@/types/domainCacheEvents';
 
 const AUDIOBOOK_LIST_ROOTS = new Set(['tag', 'genre', 'mood', 'search']);
 
@@ -332,6 +335,132 @@ function removeDeletedQueries(prefixes: readonly (readonly unknown[])[]): void {
    }
 }
 
+function removeThenInvalidatePrefixes(prefixes: readonly (readonly unknown[])[]): void {
+   for (const prefix of uniqueQueryKeys(prefixes)) {
+      void queryClient.cancelQueries({ queryKey: [...prefix], exact: false });
+      void queryClient.removeQueries({ queryKey: [...prefix], exact: false });
+      void queryClient.invalidateQueries({ queryKey: [...prefix], exact: false });
+   }
+}
+
+function resolveSubscriptionPrefixes(
+   event: CacheInvalidateEvent
+): readonly (readonly unknown[])[] {
+   return uniqueQueryKeys(event.queryKeys);
+}
+
+function shouldApplySubscriptionCatalogEvent(
+   event: CacheInvalidateEvent,
+   context: ApplyDomainCacheEventContext
+): boolean {
+   const eventUserId = event.relatedIds?.userId;
+   const currentUserId = context.currentUserId;
+   if (eventUserId && currentUserId && eventUserId !== currentUserId) {
+      return false;
+   }
+   return true;
+}
+
+function applySubscriptionCatalogEvent(
+   event: CacheInvalidateEvent,
+   context: ApplyDomainCacheEventContext
+): void {
+   if (!shouldApplySubscriptionCatalogEvent(event, context)) {
+      return;
+   }
+   removeThenInvalidatePrefixes(resolveSubscriptionPrefixes(event));
+   invalidateAudiobookChapterQueries();
+}
+
+function isAudiobookChaptersQueryKey(key: readonly unknown[]): boolean {
+   return (
+      key.length >= 3 &&
+      key[0] === 'audiobooks' &&
+      key[2] === 'chapters'
+   );
+}
+
+function invalidateAudiobookChapterQueries(audiobookId?: string): void {
+   if (audiobookId) {
+      void queryClient.cancelQueries({
+         queryKey: queryKeys.audiobooks.chaptersAll(audiobookId),
+         exact: false,
+      });
+      void queryClient.removeQueries({
+         queryKey: queryKeys.audiobooks.chaptersAll(audiobookId),
+         exact: false,
+      });
+      void queryClient.invalidateQueries({
+         queryKey: queryKeys.audiobooks.chaptersAll(audiobookId),
+         exact: false,
+      });
+      return;
+   }
+
+   void queryClient.cancelQueries({
+      predicate: (query) => isAudiobookChaptersQueryKey(query.queryKey),
+   });
+   void queryClient.removeQueries({
+      predicate: (query) => isAudiobookChaptersQueryKey(query.queryKey),
+   });
+   void queryClient.invalidateQueries({
+      predicate: (query) => isAudiobookChaptersQueryKey(query.queryKey),
+   });
+}
+
+function isSubscriptionAccessInvalidationEvent(event: CacheInvalidateEvent): boolean {
+   if (event.resource === 'subscription-gating') {
+      return true;
+   }
+
+   if (event.resource !== 'audiobook' && event.resource !== 'chapter') {
+      return false;
+   }
+
+   const { audiobookId, chapterId } = event.relatedIds ?? {};
+   return Boolean(audiobookId || chapterId);
+}
+
+function applySubscriptionAccessInvalidation(event: CacheInvalidateEvent): void {
+   const audiobookId = event.relatedIds?.audiobookId;
+   const chapterId = event.relatedIds?.chapterId;
+   const prefixes: (readonly unknown[])[] = [...event.queryKeys];
+
+   if (audiobookId && chapterId) {
+      prefixes.push(
+         queryKeys.audiobooks.chapter(audiobookId, chapterId),
+         queryKeys.audiobooks.chaptersAll(audiobookId)
+      );
+      removeThenInvalidatePrefixes(uniqueQueryKeys(prefixes));
+      return;
+   }
+
+   if (audiobookId) {
+      prefixes.push(
+         queryKeys.audiobooks.detail(audiobookId),
+         queryKeys.audiobooks.chaptersAll(audiobookId),
+         queryKeys.audiobooks.all()
+      );
+      removeThenInvalidatePrefixes(uniqueQueryKeys(prefixes));
+      return;
+   }
+
+   prefixes.push(
+      queryKeys.audiobooks.all(),
+      queryKeys.userAudiobooks.all()
+   );
+
+   if (event.relatedIds?.planId) {
+      prefixes.push(
+         queryKeys.subscriptionPlans.all(),
+         ['subscription-plans', event.relatedIds.planId]
+      );
+   }
+
+   removeThenInvalidatePrefixes(uniqueQueryKeys(prefixes));
+   invalidateAudiobookChapterQueries();
+}
+
 function cancelDeletedEntityQueries(deletedAudiobookIds: readonly string[]): void {
    for (const audiobookId of deletedAudiobookIds) {
       void queryClient.cancelQueries({
@@ -379,9 +508,22 @@ function applyDeletedDomainCacheEvent(event: CacheInvalidateEvent): void {
  * Applies a backend cache-invalidate SSE event to the TanStack Query cache.
  * Delete events remove entity caches (avoid 404 refetch loops) and refresh lists.
  */
-export function applyDomainCacheEvent(event: CacheInvalidateEvent): void {
+export function applyDomainCacheEvent(
+   event: CacheInvalidateEvent,
+   context: ApplyDomainCacheEventContext = {}
+): void {
    if (event.action === 'deleted') {
       applyDeletedDomainCacheEvent(event);
+      return;
+   }
+
+   if (event.resource === 'subscription-catalog') {
+      applySubscriptionCatalogEvent(event, context);
+      return;
+   }
+
+   if (isSubscriptionAccessInvalidationEvent(event)) {
+      applySubscriptionAccessInvalidation(event);
       return;
    }
 

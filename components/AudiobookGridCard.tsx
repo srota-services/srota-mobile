@@ -14,6 +14,10 @@ import { resolveAudiobookImageUrl } from '@/utils/imageAssets';
 import { spacing, typography, borderRadius } from '@/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
+import {
+   hasPaidSubscriptionTier,
+   SubscriptionTierCrownBadge,
+} from '@/components/SubscriptionTierCrownBadge';
 
 export const GRID_PADDING = spacing.md;
 export const GRID_GAP = spacing.sm;
@@ -46,6 +50,10 @@ export const AudiobookGridCard: React.FC<AudiobookGridCardProps> = ({
             borderRadius: borderRadius.md,
             overflow: 'hidden',
             backgroundColor: t.colors.background.card,
+         },
+         cardImageWrap: {
+            position: 'relative',
+            width: '100%',
          },
          cardImage: {
             width: '100%',
@@ -89,6 +97,7 @@ export const AudiobookGridCard: React.FC<AudiobookGridCardProps> = ({
 
    const coverUri = resolveAudiobookImageUrl(item, 'gridCard');
    const label = footerText ?? item.author;
+   const showSubscriptionCrown = hasPaidSubscriptionTier(item.minSubscriptionTier);
 
    return (
       <View style={[styles.card, { width: AUDIOBOOK_GRID_CARD_WIDTH }]}>
@@ -102,15 +111,22 @@ export const AudiobookGridCard: React.FC<AudiobookGridCardProps> = ({
             </TouchableOpacity>
          )}
          <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-            {coverUri ? (
-               <Image source={{ uri: coverUri }} style={styles.cardImage} contentFit="cover" />
-            ) : (
-               <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-                  <Text style={styles.cardImageLetter}>
-                     {(item.author || item.title).charAt(0)}
-                  </Text>
-               </View>
-            )}
+            <View style={styles.cardImageWrap}>
+               {coverUri ? (
+                  <Image source={{ uri: coverUri }} style={styles.cardImage} contentFit="cover" />
+               ) : (
+                  <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
+                     <Text style={styles.cardImageLetter}>
+                        {(item.author || item.title).charAt(0)}
+                     </Text>
+                  </View>
+               )}
+               {showSubscriptionCrown ? (
+                  <SubscriptionTierCrownBadge
+                     style={onRemove ? { top: spacing.xs, left: spacing.xs, right: undefined } : undefined}
+                  />
+               ) : null}
+            </View>
             <View style={styles.cardFooter}>
                <Text style={styles.cardFooterText} numberOfLines={2}>
                   {label}

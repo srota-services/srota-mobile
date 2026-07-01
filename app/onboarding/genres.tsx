@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useDispatch } from 'react-redux';
@@ -13,12 +13,14 @@ import {
    useOnboardingStore,
    MAX_GENRE_SELECTIONS,
    formatGenderForApi,
+   hydrateOnboardingStoreFromProgress,
 } from '@/store/onboarding';
 import { AppDispatch } from '@/store';
 import { ApiError } from '@/services/api';
 import { spacing, typography } from '@/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { useSignupWizardStepPersistence } from '@/hooks/useSignupWizardStepPersistence';
 
 const TOTAL_STEPS = 4;
 
@@ -49,6 +51,12 @@ export default function OnboardingGenresScreen() {
    );
 
    const dispatch = useDispatch<AppDispatch>();
+
+   useSignupWizardStepPersistence('onboarding_genres');
+
+   useEffect(() => {
+      hydrateOnboardingStoreFromProgress();
+   }, []);
 
    const age = useOnboardingStore((s) => s.age);
    const gender = useOnboardingStore((s) => s.gender);

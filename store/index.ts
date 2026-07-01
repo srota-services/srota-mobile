@@ -7,6 +7,7 @@ import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authReducer, { initializeAuth } from './auth';
+import { loadSignupWizardProgressCache } from '@/utils/signupWizardStorage';
 import audiobooksReducer from './audiobooks';
 import streamingReducer from './streaming';
 import playerReducer from './player';
@@ -79,7 +80,10 @@ export const persistor = persistStore(store);
  * Should be called in root layout
  */
 export const initializeApp = async (): Promise<void> => {
-   await store.dispatch(initializeAuth());
+   await Promise.all([
+      store.dispatch(initializeAuth()),
+      loadSignupWizardProgressCache(),
+   ]);
 };
 
 /**

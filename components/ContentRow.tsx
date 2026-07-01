@@ -16,6 +16,7 @@ export interface ContentItem {
    title: string;
    imageUri?: string;
    badge?: string;
+   minSubscriptionTier?: number | null;
 }
 
 interface ContentRowProps {
@@ -47,6 +48,7 @@ const MemoizedContentCard = React.memo<{
          title={item.title}
          imageUri={item.imageUri}
          badge={item.badge}
+         minSubscriptionTier={item.minSubscriptionTier}
          onPress={handlePress}
          cardWidth={cardWidth}
       />
@@ -58,6 +60,7 @@ const MemoizedContentCard = React.memo<{
       prevProps.item.title === nextProps.item.title &&
       prevProps.item.imageUri === nextProps.item.imageUri &&
       prevProps.item.badge === nextProps.item.badge &&
+      prevProps.item.minSubscriptionTier === nextProps.item.minSubscriptionTier &&
       prevProps.cardWidth === nextProps.cardWidth &&
       prevProps.onPress === nextProps.onPress
    );

@@ -1,12 +1,12 @@
-jest.mock('@/services/api', () => ({
-   STREAMING_API_BASE_URL: 'http://192.168.1.4:8082',
-}));
-
 import {
    normalizeM3u8Content,
    normalizeMediaUri,
    resolvePlaybackMediaUri,
 } from '@/utils/m3u8Normalize';
+
+jest.mock('@/services/api', () => ({
+   STREAMING_API_BASE_URL: 'http://192.168.1.4:8082',
+}));
 
 describe('m3u8Normalize', () => {
    const context = { chapterId: 'chapter-1', bitrate: '128' };

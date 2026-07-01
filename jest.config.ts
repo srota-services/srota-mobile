@@ -1,7 +1,7 @@
 module.exports = {
    preset: 'jest-expo',
    transformIgnorePatterns: [
-      'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@reduxjs/toolkit|immer)',
+      'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@reduxjs/toolkit|react-redux|immer)',
    ],
    setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
    collectCoverageFrom: [
@@ -15,6 +15,8 @@ module.exports = {
    moduleNameMapper: {
       '^@/(.*)$': '<rootDir>/$1',
       '\\.svg$': '<rootDir>/tests/__mocks__/svgMock.tsx',
+      '^@react-native-async-storage/async-storage$':
+         '@react-native-async-storage/async-storage/jest/async-storage-mock',
    },
 };
 

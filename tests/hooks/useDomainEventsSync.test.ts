@@ -25,7 +25,7 @@ describe('useDomainEventsSync', () => {
    beforeEach(() => {
       jest.clearAllMocks();
       mockConnectDomainEventStream.mockImplementation(
-         async ({ onInvalidate, signal }: { onInvalidate: (event: unknown) => void; signal: AbortSignal }) => {
+         async ({ onInvalidate: _onInvalidate, signal }: { onInvalidate: (event: unknown) => void; signal: AbortSignal }) => {
             if (signal.aborted) {
                return;
             }
@@ -87,7 +87,9 @@ describe('useDomainEventsSync', () => {
       });
 
       await waitFor(() => {
-         expect(applyDomainCacheEvent).toHaveBeenCalledWith(event);
+         expect(applyDomainCacheEvent).toHaveBeenCalledWith(event, {
+            currentUserId: null,
+         });
       });
    });
 });

@@ -9,6 +9,7 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
 }));
 
 const { GoogleSignin } = jest.requireMock('@react-native-google-signin/google-signin');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { revokeGoogleSignInSession } = require('@/services/auth') as typeof import('@/services/auth');
 
 describe('isAuthProvider', () => {
@@ -16,6 +17,7 @@ describe('isAuthProvider', () => {
       expect(isAuthProvider('email')).toBe(true);
       expect(isAuthProvider('email_registration')).toBe(true);
       expect(isAuthProvider('google')).toBe(true);
+      expect(isAuthProvider('guest')).toBe(true);
    });
 
    it('rejects invalid values', () => {

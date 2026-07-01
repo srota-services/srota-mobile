@@ -110,9 +110,9 @@ export default function ContentPreferencesScreen() {
       if (prefs?.favoriteGenreIds?.length) {
          setGenreIds([...prefs.favoriteGenreIds]);
       }
-   }, [userProfile?.preferences?.languages, userProfile?.preferences?.favoriteGenreIds]);
+   }, [userProfile?.preferences]);
 
-   const genres = genresData?.data ?? [];
+   const genres = useMemo(() => genresData?.data ?? [], [genresData?.data]);
    const atMaxGenres = genreIds.length >= MAX_GENRE_SELECTIONS;
 
    const selectedLanguageLabels = useMemo(

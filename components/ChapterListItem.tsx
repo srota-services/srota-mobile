@@ -16,6 +16,10 @@ import { spacing, typography } from '@/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { formatDuration } from '@/utils/duration';
+import { canAccessChapter } from '@/utils/chapterAccess';
+import { formatSubscriptionAccessMessage } from '@/utils/subscriptionAccessDisplay';
+import { InfoTooltip } from '@/components/InfoTooltip';
+import type { SubscriptionPlan } from '@/services/subscriptions';
 
 interface ChapterListItemProps {
    chapter: Chapter;
@@ -26,6 +30,7 @@ interface ChapterListItemProps {
    showResumeBadge?: boolean;
    onDownloadPress?: (chapter: Chapter) => void;
    onCommentsPress?: (chapter: Chapter) => void;
+   subscriptionPlans?: SubscriptionPlan[];
 }
 
 export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
@@ -35,8 +40,13 @@ export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
       isCurrentlyPlaying = false,
       isActive = false,
       onDownloadPress,
+      subscriptionPlans,
    }) => {
       const { colors } = useTheme();
+      const canInteract = canAccessChapter(chapter);
+      const accessTooltipMessage = canInteract
+         ? null
+         : formatSubscriptionAccessMessage(chapter.subscriptionAccess, subscriptionPlans);
       const styles = useThemedStyles((t) =>
          StyleSheet.create({
             container: {
@@ -50,6 +60,9 @@ export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
             },
             containerActive: {
                backgroundColor: t.colors.background.highlight,
+            },
+            containerInactive: {
+               opacity: 0.55,
             },
             divider: {
                height: 1,
@@ -73,6 +86,9 @@ export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
                textAlign: 'center',
                marginRight: spacing.sm,
             },
+            chapterNumberInactive: {
+               color: t.colors.text.secondary,
+            },
             infoContainer: {
                flex: 1,
                marginRight: spacing.sm,
@@ -91,9 +107,15 @@ export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
                fontWeight: '600',
                color: t.colors.accent.primaryDark,
             },
+            titleInactive: {
+               color: t.colors.text.secondary,
+            },
             duration: {
                fontSize: typography.fontSize.xs,
                color: t.colors.text.secondary,
+            },
+            durationInactive: {
+               color: t.colors.text.muted,
             },
             actions: {
                flexDirection: 'row',
@@ -111,6 +133,9 @@ export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
                alignItems: 'center',
                justifyContent: 'center',
             },
+            playButtonLocked: {
+               backgroundColor: t.colors.background.input,
+            },
             playIconOffset: {
                marginLeft: 2,
             },
@@ -118,64 +143,106 @@ export const ChapterListItem: React.FC<ChapterListItemProps> = React.memo(
       );
 
       const formattedDuration = formatDuration(chapter.duration);
-      const isHighlighted = isActive || isCurrentlyPlaying;
+      const isHighlighted = canInteract && (isActive || isCurrentlyPlaying);
 
       return (
          <View>
-         <TouchableOpacity
-            style={[styles.container, isHighlighted && styles.containerActive]}
-            onPress={() => onPress(chapter)}
-            activeOpacity={0.7}
-         >
-            {isHighlighted && <View style={styles.activeBar} />}
+            <TouchableOpacity
+               style={[
+                  styles.container,
+                  isHighlighted && styles.containerActive,
+                  !canInteract && styles.containerInactive,
+               ]}
+               onPress={canInteract ? () => onPress(chapter) : undefined}
+               activeOpacity={canInteract ? 0.7 : 1}
+               disabled={!canInteract}
+               accessibilityState={{ disabled: !canInteract }}
+            >
+               {isHighlighted && <View style={styles.activeBar} />}
 
-            <Text style={styles.chapterNumber}>{chapter.chapterNumber}</Text>
-
-            <View style={styles.infoContainer}>
                <Text
-                  style={[styles.title, isHighlighted && styles.titleActive]}
-                  numberOfLines={1}
+                  style={[
+                     styles.chapterNumber,
+                     !canInteract && styles.chapterNumberInactive,
+                  ]}
                >
-                  {chapter.title}
+                  {chapter.chapterNumber}
                </Text>
-               <Text style={styles.duration}>{formattedDuration}</Text>
-            </View>
 
-            <View style={styles.actions}>
-               {onDownloadPress && (
-                  <TouchableOpacity
-                     style={styles.actionButton}
-                     onPress={(e) => {
-                        e.stopPropagation?.();
-                        onDownloadPress(chapter);
-                     }}
-                     activeOpacity={0.7}
+               <View style={styles.infoContainer}>
+                  <Text
+                     style={[
+                        styles.title,
+                        isHighlighted && styles.titleActive,
+                        !canInteract && styles.titleInactive,
+                     ]}
+                     numberOfLines={1}
                   >
-                     <Ionicons
-                        name="download-outline"
-                        size={20}
-                        color={colors.accent.primary}
+                     {chapter.title}
+                  </Text>
+                  <Text
+                     style={[
+                        styles.duration,
+                        !canInteract && styles.durationInactive,
+                     ]}
+                  >
+                     {formattedDuration}
+                  </Text>
+               </View>
+
+               <View style={styles.actions} pointerEvents={canInteract ? 'auto' : 'box-none'}>
+                  {!canInteract && accessTooltipMessage ? (
+                     <InfoTooltip
+                        message={accessTooltipMessage}
+                        accessibilityLabel="Chapter access information"
                      />
-                  </TouchableOpacity>
-               )}
-               <TouchableOpacity
-                  style={styles.playButton}
-                  onPress={(e) => {
-                     e.stopPropagation?.();
-                     onPress(chapter);
-                  }}
-                  activeOpacity={0.8}
-               >
-                  <Ionicons
-                     name={isCurrentlyPlaying ? 'pause' : 'play'}
-                     size={14}
-                     color="#FFFFFF"
-                     style={!isCurrentlyPlaying ? styles.playIconOffset : undefined}
-                  />
-               </TouchableOpacity>
-            </View>
-         </TouchableOpacity>
-         <View style={styles.divider} />
+                  ) : null}
+                  {canInteract && onDownloadPress && (
+                     <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={(e) => {
+                           e.stopPropagation?.();
+                           onDownloadPress(chapter);
+                        }}
+                        activeOpacity={0.7}
+                     >
+                        <Ionicons
+                           name="download-outline"
+                           size={20}
+                           color={colors.accent.primary}
+                        />
+                     </TouchableOpacity>
+                  )}
+                  {canInteract ? (
+                     <TouchableOpacity
+                        style={styles.playButton}
+                        onPress={(e) => {
+                           e.stopPropagation?.();
+                           onPress(chapter);
+                        }}
+                        activeOpacity={0.8}
+                     >
+                        <Ionicons
+                           name={isCurrentlyPlaying ? 'pause' : 'play'}
+                           size={14}
+                           color="#FFFFFF"
+                           style={
+                              !isCurrentlyPlaying ? styles.playIconOffset : undefined
+                           }
+                        />
+                     </TouchableOpacity>
+                  ) : (
+                     <View style={[styles.playButton, styles.playButtonLocked]}>
+                        <Ionicons
+                           name="lock-closed"
+                           size={14}
+                           color={colors.text.muted}
+                        />
+                     </View>
+                  )}
+               </View>
+            </TouchableOpacity>
+            <View style={styles.divider} />
          </View>
       );
    }

@@ -65,11 +65,13 @@ A modern, high-performance mobile application for streaming and managing audiobo
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** (v18 or higher)
-- **npm** or **yarn** package manager
-- **Expo CLI** (`npm install -g expo-cli`)
+- **Node.js** `26.4.0` (see `.nvmrc` — run `nvm use` or `fnm use` from this directory)
+- **npm** `11.17.0` (install with `npm i -g npm@11.17.0` if needed)
+- **Expo CLI** (via `npx expo` or global install)
 - **iOS Development**: Xcode (for macOS only)
 - **Android Development**: Android Studio and Android SDK
+
+All npm scripts enforce the Node and npm versions above. Run `npm run check:runtime` to verify your environment.
 
 ## 🚀 Getting Started
 

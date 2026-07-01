@@ -8,7 +8,7 @@ interface UsePullToRefreshOptions {
  * Bundle React Query refetch callbacks for pull-to-refresh gestures.
  */
 export function usePullToRefresh(
-   refetchFns: Array<() => Promise<unknown>>,
+   refetchFns: (() => Promise<unknown>)[],
    options?: UsePullToRefreshOptions
 ): { refreshing: boolean; onRefresh: () => void } {
    const [localRefreshing, setLocalRefreshing] = useState(false);

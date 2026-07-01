@@ -3,11 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { Image } from 'expo-image';
 import { spacing, typography, borderRadius } from '@/theme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
+import {
+   hasPaidSubscriptionTier,
+   SubscriptionTierCrownBadge,
+} from '@/components/SubscriptionTierCrownBadge';
 
 interface ContentCardProps {
    title: string;
    imageUri?: string;
    badge?: string; // e.g., "TOP 10"
+   minSubscriptionTier?: number | null;
    onPress?: () => void;
    cardWidth?: number;
 }
@@ -20,6 +25,7 @@ const ContentCardComponent: React.FC<ContentCardProps> = ({
    title,
    imageUri,
    badge,
+   minSubscriptionTier,
    onPress,
    cardWidth = 140,
 }) => {
@@ -88,6 +94,8 @@ const ContentCardComponent: React.FC<ContentCardProps> = ({
       })
    );
 
+   const showSubscriptionCrown = hasPaidSubscriptionTier(minSubscriptionTier);
+
    return (
       <TouchableOpacity
          onPress={onPress}
@@ -116,6 +124,7 @@ const ContentCardComponent: React.FC<ContentCardProps> = ({
                   <Text style={styles.badgeText}>{badge}</Text>
                </View>
             )}
+            {showSubscriptionCrown ? <SubscriptionTierCrownBadge /> : null}
          </View>
 
          {/* Title - optional, can be shown below or on overlay */}

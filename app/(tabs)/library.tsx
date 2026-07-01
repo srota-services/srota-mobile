@@ -160,6 +160,7 @@ function LibraryScreenContent() {
                         <ContentCard
                            title={book.title}
                            imageUri={imageUri}
+                           minSubscriptionTier={book.minSubscriptionTier}
                            onPress={() => router.push(`/details/${book.id}` as never)}
                            cardWidth={140}
                         />

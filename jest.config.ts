@@ -15,6 +15,8 @@ module.exports = {
    moduleNameMapper: {
       '^@/(.*)$': '<rootDir>/$1',
       '\\.svg$': '<rootDir>/tests/__mocks__/svgMock.tsx',
+      '^@react-native-async-storage/async-storage$':
+         '@react-native-async-storage/async-storage/jest/async-storage-mock',
    },
 };
 

@@ -45,17 +45,17 @@ describe('getHomeGreetingName', () => {
       emailVerified: true,
    };
 
-   it('returns "there Guest" for guest users', () => {
-      expect(getHomeGreetingName(guestUser)).toBe('there Guest');
-      expect(getHomeGreetingName(guestUser, 'Alex')).toBe('there Guest');
+   it('returns "Guest" for guest users', () => {
+      expect(getHomeGreetingName(guestUser)).toBe('Guest');
+      expect(getHomeGreetingName(guestUser, 'Alex')).toBe('Guest');
    });
 
    it('returns first name for registered users when available', () => {
       expect(getHomeGreetingName(listenerUser, 'Alex')).toBe('Alex');
    });
 
-   it('returns "there" for registered users without a first name', () => {
-      expect(getHomeGreetingName(listenerUser)).toBe('there');
-      expect(getHomeGreetingName(null)).toBe('there');
+   it('returns empty string for registered users without a first name', () => {
+      expect(getHomeGreetingName(listenerUser)).toBe('');
+      expect(getHomeGreetingName(null)).toBe('');
    });
 });
